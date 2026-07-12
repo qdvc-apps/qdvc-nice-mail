@@ -10,7 +10,7 @@ from gi.repository import Gtk  # noqa: E402
 class PreferencesDialog(Gtk.Dialog):
     def __init__(self, window) -> None:  # noqa: ANN001
         super().__init__(title="Preferences", transient_for=window, modal=True)
-        self.window = window
+        self.main_window = window
         self.config = window.config
         self.add_button(Gtk.STOCK_CLOSE, Gtk.ResponseType.CLOSE)
         self.set_default_size(380, -1)

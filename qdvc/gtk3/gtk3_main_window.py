@@ -103,29 +103,58 @@ class MainWindow(Gtk.ApplicationWindow):
         self.show_all()
 
     # ---- menubar ---------------------------------------------------------
-    # Fallbacks for icon names that some themes lack, so the image always shows.
+    # Fallback chains for icon names that some themes lack, tried in order.
     _ICON_FALLBACKS = {
-        "help-about": "help-browser",
+        "help-about": ["help-about", "help-browser", "help-contents", "dialog-information"],
     }
 
-    def _resolve_icon(self, name: str) -> str:
+    def _resolve_icon(self, name: str) -> str | None:
+        """Return the first icon name present in the theme, or None if none are."""
         theme = Gtk.IconTheme.get_default()
-        if theme.has_icon(name):
-            return name
-        alt = self._ICON_FALLBACKS.get(name)
-        if alt and theme.has_icon(alt):
-            return alt
-        return name
+        for candidate in self._ICON_FALLBACKS.get(name, [name]):
+            if theme.has_icon(candidate):
+                return candidate
+        return None
 
-    def _menu_item(self, label: str, icon: str | None = None) -> Gtk.MenuItem:
+    def _menu_item(
+        self,
+        label: str,
+        icon: str | None = None,
+        accel: tuple[int, int] | None = None,
+    ) -> Gtk.MenuItem:
+        """A menu item with a fixed icon slot, label, and optional accel hint.
+
+        `accel` is a (keyval, modifier) pair; when given, the accelerator is
+        both attached to the item and displayed right-aligned, and the item is
+        returned ready to have its `activate` handler connected.
+        """
         item = Gtk.MenuItem()
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        if icon:
-            box.pack_start(
-                Gtk.Image.new_from_icon_name(self._resolve_icon(icon), Gtk.IconSize.MENU),
+
+        # Fixed-width icon slot keeps every label left-aligned to the same x,
+        # whether or not the item has an icon (fixes uneven left padding).
+        icon_slot = Gtk.Box()
+        icon_slot.set_size_request(16, 16)
+        resolved = self._resolve_icon(icon) if icon else None
+        if resolved:
+            icon_slot.pack_start(
+                Gtk.Image.new_from_icon_name(resolved, Gtk.IconSize.MENU),
                 False, False, 0,
             )
+        box.pack_start(icon_slot, False, False, 0)
+
         box.pack_start(Gtk.Label(label=label, xalign=0.0), True, True, 0)
+
+        if accel is not None:
+            keyval, mods = accel
+            accel_label = Gtk.Label(label=Gtk.accelerator_get_label(keyval, mods))
+            accel_label.get_style_context().add_class("accelerator")
+            accel_label.set_sensitive(False)
+            box.pack_end(accel_label, False, False, 0)
+            item.add_accelerator(
+                "activate", self.accel_group, keyval, mods, Gtk.AccelFlags.VISIBLE,
+            )
+
         item.add(box)
         return item
 
@@ -137,10 +166,9 @@ class MainWindow(Gtk.ApplicationWindow):
         file_item = Gtk.MenuItem(label="File")
         file_item.set_submenu(file_menu)
 
-        self.mi_open = self._menu_item("Open Workspace…", "document-open")
-        self.mi_open.add_accelerator(
-            "activate", self.accel_group, Gdk.KEY_o,
-            Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
+        self.mi_open = self._menu_item(
+            "Open Workspace…", "document-open",
+            accel=(Gdk.KEY_o, Gdk.ModifierType.CONTROL_MASK),
         )
         self.mi_open.connect("activate", lambda *_: self.choose_workspace())
         file_menu.append(self.mi_open)
@@ -150,10 +178,9 @@ class MainWindow(Gtk.ApplicationWindow):
         file_menu.append(self.mi_reveal)
 
         file_menu.append(Gtk.SeparatorMenuItem())
-        mi_quit = self._menu_item("Quit", "application-exit")
-        mi_quit.add_accelerator(
-            "activate", self.accel_group, Gdk.KEY_q,
-            Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
+        mi_quit = self._menu_item(
+            "Quit", "application-exit",
+            accel=(Gdk.KEY_q, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_quit.connect("activate", lambda *_: self.app.quit())
         file_menu.append(mi_quit)
@@ -164,19 +191,17 @@ class MainWindow(Gtk.ApplicationWindow):
         edit_item = Gtk.MenuItem(label="Edit")
         edit_item.set_submenu(edit_menu)
 
-        mi_copy = self._menu_item("Copy", "edit-copy")
-        mi_copy.add_accelerator(
-            "activate", self.accel_group, Gdk.KEY_c,
-            Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
+        mi_copy = self._menu_item(
+            "Copy", "edit-copy",
+            accel=(Gdk.KEY_c, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_copy.connect("activate", lambda *_: self.copy_current_tab())
         edit_menu.append(mi_copy)
         edit_menu.append(Gtk.SeparatorMenuItem())
 
-        mi_prefs = self._menu_item("Preferences", "preferences-system")
-        mi_prefs.add_accelerator(
-            "activate", self.accel_group, Gdk.KEY_comma,
-            Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
+        mi_prefs = self._menu_item(
+            "Preferences", "preferences-system",
+            accel=(Gdk.KEY_comma, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_prefs.connect("activate", lambda *_: self._open_preferences())
         edit_menu.append(mi_prefs)
@@ -189,18 +214,13 @@ class MainWindow(Gtk.ApplicationWindow):
         for idx, (label, key) in enumerate((
             ("Emoji", Gdk.KEY_1), ("Phrases", Gdk.KEY_2), ("Signature", Gdk.KEY_3),
         )):
-            mi = self._menu_item(label)
-            mi.add_accelerator(
-                "activate", self.accel_group, key,
-                Gdk.ModifierType.MOD1_MASK, Gtk.AccelFlags.VISIBLE,
-            )
+            mi = self._menu_item(label, accel=(key, Gdk.ModifierType.MOD1_MASK))
             mi.connect("activate", lambda _w, i=idx: self._show_tab(i))
             view_menu.append(mi)
         view_menu.append(Gtk.SeparatorMenuItem())
-        mi_refresh = self._menu_item("Refresh", "view-refresh")
-        mi_refresh.add_accelerator(
-            "activate", self.accel_group, Gdk.KEY_r,
-            Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
+        mi_refresh = self._menu_item(
+            "Refresh", "view-refresh",
+            accel=(Gdk.KEY_r, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_refresh.connect("activate", lambda *_: self.refresh_current_tab())
         view_menu.append(mi_refresh)

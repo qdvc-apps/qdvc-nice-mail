@@ -89,8 +89,16 @@ Two menu commands are tab-adaptive and dispatch on the active page:
 Refresh, Ctrl+R); the latter rescans the workspace and, on the Signature tab,
 also generates a new message ref.
 
-Menu icons go through `_resolve_icon`, which falls back to a theme-present
-alternative when a named icon is missing (e.g. `help-about` → `help-browser`).
+Menu items are built by `_menu_item(label, icon, accel)`: a fixed-width icon
+slot keeps every label aligned to the same x-offset (with or without an icon),
+and when an `accel` pair is passed the accelerator is both attached to the item
+and shown right-aligned via `Gtk.accelerator_get_label`. Icon names go through
+`_resolve_icon`, which walks a per-name fallback chain and returns the first
+name present in the theme, or `None` (leaving the slot blank rather than
+rendering a broken image) — e.g. `help-about` falls back through
+`help-browser` / `help-contents` to the near-universal `dialog-information`.
+`PreferencesDialog` stores its parent as `main_window` (not `window`, which
+collides with a read-only `Gtk.Window` GObject field).
 Toolbar combo boxes are given a fixed width so focus/prelight states cannot
 relayout neighbouring items.
 

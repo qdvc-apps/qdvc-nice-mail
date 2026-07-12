@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=QDVC Nice Mail
+Comment=Write emails faster with reusable emoji, phrases and signatures
+Exec=python3 /full/path/to/qdvc_nicemail.py %U
+Path=/full/path/to
+Icon=internet-mail
+Terminal=false
+Categories=Office;Email;Utility;
+StartupNotify=true
+StartupWMClass=qdvc-nicemail

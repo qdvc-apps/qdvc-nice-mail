@@ -89,7 +89,9 @@ class EmojiTab(Gtk.Box):
         if self.block == "favourites":
             emoji = ws.favourite_emoji()
         else:
-            emoji = ws.catalogue.all()
+            # All Emoji: the Unicode-derived catalogue, plus any custom (pasted)
+            # favourites, which have no catalogue entry. Show customs first.
+            emoji = ws.custom_favourites() + ws.catalogue.all()
 
         q = self.query.strip().lower()
         if q:
@@ -101,8 +103,12 @@ class EmojiTab(Gtk.Box):
             ]
 
         for e in emoji:
+            name = e.name
+            if getattr(e, "custom", False):
+                # Note that this row is a user-supplied glyph from favourites.
+                name = f"{e.name}  — custom emoji from your favourites"
             self.store.append(
-                [e.id, e.display(self.skin_tone), e.name, ws.favourite_label(e.id)]
+                [e.id, e.display(self.skin_tone), name, ws.favourite_label(e.id)]
             )
 
         self.emit("status", f"{len(emoji)} emoji shown ({self.block}).")
@@ -189,6 +195,45 @@ class EmojiTab(Gtk.Box):
             self.emit("status", f"Added {emoji_id} to favourites.")
             if self.block == "favourites":
                 self.reload()
+
+    def add_custom_favourite(self) -> None:
+        """Prompt for a pasted glyph and add it as a custom favourite."""
+        ws = self.window.workspace
+        if ws is None:
+            self.emit("status", "Open a workspace first.")
+            return
+        dialog = Gtk.Dialog(
+            title="Add Custom Emoji", transient_for=self.window, modal=True
+        )
+        dialog.add_buttons(
+            Gtk.STOCK_CANCEL, Gtk.ResponseType.CANCEL,
+            Gtk.STOCK_OK, Gtk.ResponseType.OK,
+        )
+        box = dialog.get_content_area()
+        box.set_spacing(6)
+        box.set_border_width(10)
+        box.add(Gtk.Label(
+            label="Paste an emoji (e.g. one not found in the list):",
+            xalign=0.0,
+        ))
+        entry = Gtk.Entry()
+        entry.set_activates_default(True)
+        entry.set_width_chars(12)
+        dialog.set_default_response(Gtk.ResponseType.OK)
+        box.add(entry)
+        dialog.show_all()
+        resp = dialog.run()
+        glyph = entry.get_text().strip()
+        dialog.destroy()
+        if resp != Gtk.ResponseType.OK or not glyph:
+            return
+        new_id = ws.add_custom_favourite(glyph)
+        if new_id is None:
+            self.emit("status", "That emoji is already a favourite (or was blank).")
+            return
+        self.reload()
+        self._reselect(new_id)
+        self.emit("status", f"Added custom emoji {glyph} to favourites.")
 
     def _remove_favourite(self, emoji_id: str) -> None:
         ws = self.window.workspace

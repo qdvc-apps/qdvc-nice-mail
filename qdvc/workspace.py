@@ -37,6 +37,7 @@ class Workspace:
         self.catalogue = catalogue or EmojiCatalogue()
         self.favourite_ids: list[str] = []
         self.favourite_labels: dict[str, str] = {}
+        self.favourite_chars: dict[str, str] = {}  # id -> glyph, for custom emoji
         self.phrases: list[Phrase] = []
         self.profiles: list[Profile] = []
         self.scan()
@@ -108,6 +109,7 @@ class Workspace:
     def _read_favourites(self) -> list[str]:
         ids: list[str] = []
         self.favourite_labels = {}
+        self.favourite_chars = {}
         if not os.path.exists(self.favourites_csv):
             return ids
         with open(self.favourites_csv, newline="", encoding="utf-8") as fh:
@@ -119,6 +121,11 @@ class Workspace:
                     label = (row.get("label") or "").strip()
                     if label:
                         self.favourite_labels[fid] = label
+                    # A glyph is stored only for custom (pasted) emoji that
+                    # are not in the Unicode-name-derived catalogue.
+                    char = (row.get("char") or "").strip()
+                    if char:
+                        self.favourite_chars[fid] = char
         return ids
 
     def _read_phrases(self) -> list[Phrase]:
@@ -173,9 +180,13 @@ class Workspace:
         import io
         buf = io.StringIO()
         writer = csv.writer(buf)
-        writer.writerow(["id", "label"])
+        writer.writerow(["id", "label", "char"])
         for fid in ids:
-            writer.writerow([fid, self.favourite_labels.get(fid, "")])
+            writer.writerow([
+                fid,
+                self.favourite_labels.get(fid, ""),
+                self.favourite_chars.get(fid, ""),
+            ])
         _atomic_write(self.favourites_csv, buf.getvalue())
 
     def add_favourite(self, emoji_uid: str) -> bool:
@@ -185,11 +196,30 @@ class Workspace:
         self._write_favourites(self.favourite_ids)
         return True
 
+    def add_custom_favourite(self, char: str) -> str | None:
+        """Favourite an arbitrary pasted glyph not in the catalogue.
+
+        Returns the assigned id, or None if the glyph is blank or already a
+        favourite. The glyph is persisted in the `char` column so it survives
+        reload even though it has no Unicode-name-derived catalogue entry.
+        """
+        char = (char or "").strip()
+        if not char:
+            return None
+        em = self.catalogue.make_custom(char)
+        if em.id in self.favourite_ids:
+            return None
+        self.favourite_ids.append(em.id)
+        self.favourite_chars[em.id] = char
+        self._write_favourites(self.favourite_ids)
+        return em.id
+
     def remove_favourite(self, emoji_uid: str) -> bool:
         if emoji_uid not in self.favourite_ids:
             return False
         self.favourite_ids.remove(emoji_uid)
         self.favourite_labels.pop(emoji_uid, None)
+        self.favourite_chars.pop(emoji_uid, None)
         self._write_favourites(self.favourite_ids)
         return True
 
@@ -221,10 +251,30 @@ class Workspace:
         self._write_favourites(self.favourite_ids)
         return True
 
+    def resolve_emoji(self, fid: str):
+        """Return the Emoji for a favourite id, catalogue or custom."""
+        em = self.catalogue.get(fid)
+        if em is not None:
+            return em
+        char = self.favourite_chars.get(fid)
+        if char:
+            return self.catalogue.make_custom(char)
+        return None
+
+    def custom_favourites(self) -> list:
+        """Custom (pasted) favourite emoji, in favourites order."""
+        out = []
+        for fid in self.favourite_ids:
+            if self.catalogue.get(fid) is None:
+                em = self.resolve_emoji(fid)
+                if em is not None:
+                    out.append(em)
+        return out
+
     def favourite_emoji(self):
         out = []
         for fid in self.favourite_ids:
-            em = self.catalogue.get(fid)
+            em = self.resolve_emoji(fid)
             if em is not None:
                 out.append(em)
         return out
@@ -294,7 +344,9 @@ class Workspace:
     def validate(self) -> dict[str, list[str]]:
         problems: dict[str, list[str]] = {"orphan_favourites": [], "missing_files": []}
         for fid in self.favourite_ids:
-            if self.catalogue.get(fid) is None:
+            # A favourite is an orphan only if it is neither in the catalogue
+            # nor a custom glyph with a stored character.
+            if self.catalogue.get(fid) is None and not self.favourite_chars.get(fid):
                 problems["orphan_favourites"].append(fid)
         for label, path in (
             ("signoff.txt", self.signoff_txt),

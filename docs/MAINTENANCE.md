@@ -24,7 +24,11 @@ the spec.
 
 The emoji list is built at runtime from the standard-library `unicodedata`
 (see `qdvc/emoji.py`), so no third-party emoji package is required (satisfying
-the spec's "third-party libs SHOULD be optional").
+the spec's "third-party libs SHOULD be optional"). This scans single code
+points, so multi-code-point / ZWJ sequences (e.g. ❤️‍🩹, which has no single
+Unicode name) are **not** in the generated catalogue. Users can still add any
+such glyph via "custom favourites" (see below); a fuller fix would be to parse
+Unicode's `emoji-test.txt`.
 
 ## Directory & file layout
 
@@ -47,10 +51,12 @@ qdvc/
 
 ## Data formats (this app)
 
-- `favourite_emoji.csv` — header `id,label`; one favourite per row, in display
-  order. `label` is an optional user label and may be empty. Files written by
-  older versions with a bare `id` header still load (the reader tolerates a
-  missing `label` column).
+- `favourite_emoji.csv` — header `id,label,char`; one favourite per row, in
+  display order. `label` is an optional user label. `char` holds the literal
+  glyph and is populated only for custom (pasted) favourites — catalogue emoji
+  leave it blank and resolve their glyph from the catalogue. Files written by
+  older versions with an `id` or `id,label` header still load (the reader
+  tolerates missing `label`/`char` columns).
 - `phrases.csv` — header `id,text`; rows are stored in display order.
 - `mailsigs/signoff.txt` — free text placed before the m-dash.
 - `mailsigs/disclaimer.txt` — disclaimer body (prefixed `Disclaimer: ` on
@@ -61,11 +67,18 @@ qdvc/
 ## Model / load pipeline
 
 `Workspace(path)` runs `scan()` to build `favourite_ids` (plus the
-`favourite_labels` map), `phrases`, and `profiles`. `ensure_scaffold()` creates
-any missing files with defaults, including the required single default
-favourite 😊. Emoji ids are the stable snake_case of the Unicode name;
-favourites and their labels reference emoji by id so the CSV stays
-human-readable and diff-able. List order in `favourite_emoji.csv` and
+`favourite_labels` and `favourite_chars` maps), `phrases`, and `profiles`.
+`ensure_scaffold()` creates any missing files with defaults, including the
+required single default favourite 😊. Emoji ids are the stable snake_case of
+the Unicode name; favourites and their labels reference emoji by id so the CSV
+stays human-readable and diff-able. Custom favourites are pasted glyphs with no
+catalogue entry: `add_custom_favourite(char)` assigns a `custom_<codepoints>`
+id (`naming.custom_emoji_id`) and stores the glyph in `favourite_chars`;
+`resolve_emoji(id)` returns the catalogue `Emoji` or reconstructs a custom one
+via `EmojiCatalogue.make_custom` (best-effort name from the component code
+points, and skin tone never applied). Custom favourites also appear in the
+*All Emoji* block (`custom_favourites()`), where the view annotates the name.
+List order in `favourite_emoji.csv` and
 `phrases.csv` is significant and preserved on every write, which is what backs
 the move-up/move-down feature.
 

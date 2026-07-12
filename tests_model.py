@@ -107,6 +107,37 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(self.ws.move_phrase(last, -1))
         self.assertEqual(self.ws.phrases[-2].id, last)
 
+    def test_custom_favourite(self):
+        mending = "\u2764\ufe0f\u200d\U0001fa79"  # ❤️‍🩹
+        new_id = self.ws.add_custom_favourite(mending)
+        self.assertIsNotNone(new_id)
+        self.assertIn(new_id, self.ws.favourite_ids)
+        # Adding the same glyph again is a no-op.
+        self.assertIsNone(self.ws.add_custom_favourite(mending))
+        # Resolvable as a custom emoji, and skin tone never applies.
+        em = self.ws.resolve_emoji(new_id)
+        self.assertTrue(em.custom)
+        self.assertEqual(em.char, mending)
+        self.assertEqual(em.display("dark"), mending)
+        # Appears among custom favourites and is not an orphan.
+        self.assertIn(new_id, [e.id for e in self.ws.custom_favourites()])
+        self.assertEqual(self.ws.validate()["orphan_favourites"], [])
+        # Glyph + label persist across reload.
+        self.ws.set_favourite_label(new_id, "mending")
+        reloaded = Workspace(self.dir)
+        self.assertEqual(reloaded.favourite_chars.get(new_id), mending)
+        self.assertEqual(reloaded.favourite_label(new_id), "mending")
+        self.assertTrue(reloaded.resolve_emoji(new_id).custom)
+
+    def test_old_two_column_favourites_still_load(self):
+        # A favourites file predating the `char` column must still read.
+        import os
+        with open(self.ws.favourites_csv, "w", encoding="utf-8", newline="") as fh:
+            fh.write("id,label\nsmiling_face_with_smiling_eyes,hi\n")
+        reloaded = Workspace(self.dir)
+        self.assertEqual(reloaded.favourite_ids, ["smiling_face_with_smiling_eyes"])
+        self.assertEqual(reloaded.favourite_label("smiling_face_with_smiling_eyes"), "hi")
+
     def test_signature_without_disclaimer(self):
         prof = self.ws.get_profile(None)
         sig = assemble_signature(self.ws.signoff, prof, self.ws.disclaimer, False, "ABC1234567")

@@ -282,6 +282,18 @@ class MainWindow(Gtk.ApplicationWindow):
 
         tb.insert(Gtk.SeparatorToolItem(), -1)
 
+        # Add a custom (pasted) emoji to favourites.
+        custom_btn = Gtk.ToolButton(label="Add Custom")
+        custom_btn.set_icon_name("list-add")
+        custom_btn.set_is_important(True)
+        custom_btn.set_tooltip_text(
+            "Add a pasted emoji to favourites (e.g. one not in the list)"
+        )
+        custom_btn.connect("clicked", lambda *_: self.emoji_tab.add_custom_favourite())
+        tb.insert(custom_btn, -1)
+
+        tb.insert(Gtk.SeparatorToolItem(), -1)
+
         # Search entry.
         search_item = Gtk.ToolItem()
         self.search_entry = Gtk.SearchEntry()

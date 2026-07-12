@@ -55,11 +55,12 @@ class Emoji:
     id: str
     char: str          # base character (no modifier)
     name: str          # human-readable Unicode name (Title Case)
+    custom: bool = False   # True for user-supplied (pasted) glyphs
 
     def display(self, skin_tone: str = "none") -> str:
         """The character with an optional skin-tone modifier applied."""
         mod = SKIN_TONES.get(skin_tone, "")
-        if mod and accepts_skin_tone(self.char):
+        if mod and not self.custom and accepts_skin_tone(self.char):
             return self.char + mod
         return self.char
 
@@ -113,6 +114,28 @@ class EmojiCatalogue:
 
     def get(self, uid: str) -> Emoji | None:
         return self._by_id.get(uid)
+
+    def make_custom(self, char: str) -> Emoji:
+        """Build a custom Emoji for an arbitrary pasted glyph.
+
+        The name is a best-effort description assembled from the Unicode names
+        of the component code points (skipping joiners/variation selectors), so
+        e.g. '\u2764\ufe0f\u200d\U0001fa79' becomes searchable as
+        'Heavy Black Heart + Adhesive Bandage'.
+        """
+        from .naming import custom_emoji_id
+
+        skip = {0x200D, 0xFE0F, 0xFE0E}  # ZWJ + variation selectors
+        parts: list[str] = []
+        for c in char:
+            if ord(c) in skip:
+                continue
+            try:
+                parts.append(unicodedata.name(c).title())
+            except ValueError:
+                continue
+        name = " + ".join(parts) if parts else "Custom Emoji"
+        return Emoji(id=custom_emoji_id(char), char=char, name=name, custom=True)
 
     def search(self, query: str) -> list[Emoji]:
         """Match on name/description or id (case-insensitive substring)."""

@@ -18,11 +18,14 @@ top).
 1. **Emoji** — a table of emoji, one per row (symbol, name, and your optional
    user label). Select a row and press **Ctrl+C** to copy the emoji. The
    toolbar offers a **block** dropdown (*Favourites* by default, or *All Emoji*
-   — the full Unicode set), a **skin-tone** dropdown, **Move Up/Down** buttons
-   to reorder favourites, and a **search** box that matches the emoji name,
-   description, or your user label. **Right-click** any emoji to add it to (or
-   remove it from) your favourites, set a **user label** on a favourite, or move
-   it up/down.
+   — the full Unicode set), a **skin-tone** dropdown, an **Add Custom** button,
+   **Move Up/Down** buttons to reorder favourites, and a **search** box that
+   matches the emoji name, description, or your user label. **Right-click** any
+   emoji to add it to (or remove it from) your favourites, set a **user label**
+   on a favourite, or move it up/down. If an emoji isn't in the list (many
+   multi-part emoji such as ❤️‍🩹 have no single Unicode name and so aren't
+   generated), use **Add Custom** to paste it in; it's saved to your favourites
+   and also shown in *All Emoji*, noted as a custom emoji.
 2. **Phrases** — your common phrases, with toolbar buttons to **add**, **edit**,
    **delete**, and **Move Up/Down** to reorder. Select one and Ctrl+C (or the
    Copy button) to copy it.
@@ -43,7 +46,7 @@ first open. Layout:
 
 ```
 <workspace>/
-    favourite_emoji.csv        columns: id,label      (favourites + user labels)
+    favourite_emoji.csv        columns: id,label,char (favourites, labels, custom glyphs)
     phrases.csv                columns: id,text
     mailsigs/
         signoff.txt            everything before the m-dash
@@ -54,7 +57,9 @@ first open. Layout:
 
 Each emoji has a stable snake_case **id** derived from its Unicode name
 (e.g. `waving_hand_sign`); favourites are stored by that id, alongside an
-optional user label in the `label` column. The default favourite is 😊.
+optional user label in the `label` column. Custom (pasted) favourites get a
+`custom_<codepoints>` id and store their glyph in the `char` column so they
+survive reload; catalogue emoji leave `char` blank. The default favourite is 😊.
 
 A ready-made `sample-workspace/` is included to try immediately.
 

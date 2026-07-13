@@ -22,6 +22,7 @@ DEFAULTS: dict[str, Any] = {
     "include_disclaimer": True,
     "ref_only": False,
     "signature_font": "",
+    "note_email": "",
 }
 
 _VALID_TOOLBAR = {"beside", "below"}

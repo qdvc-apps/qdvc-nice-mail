@@ -6,6 +6,7 @@ import unittest
 from qdvc.emoji import DEFAULT_FAVOURITE_CHAR, EmojiCatalogue, accepts_skin_tone
 from qdvc.mailsig import assemble_signature
 from qdvc.naming import MSGREF_ALPHABET, MSGREF_LENGTH, emoji_id, generate_message_ref
+from qdvc.note import build_note_eml, default_note_filename, note_body
 from qdvc.workspace import Workspace
 
 
@@ -152,6 +153,33 @@ class WorkspaceTests(unittest.TestCase):
         self.assertEqual(sig, "\u2014\n\nMessage ref. ABC1234567\n")
         self.assertNotIn("Kind regards", sig)
         self.assertNotIn("Disclaimer:", sig)
+
+
+class NoteEmailTests(unittest.TestCase):
+    def test_note_body_trailer(self):
+        body = note_body("Buy milk", "BeFGzLRHNX")
+        # user text, two blank lines, m-dash, blank line, ref line.
+        self.assertEqual(body, "Buy milk\n\n\n\u2014\n\nMessage ref. BeFGzLRHNX\n")
+
+    def test_eml_headers_and_self_addressing(self):
+        from datetime import datetime, timezone, timedelta
+        when = datetime(2026, 7, 13, 14, 30, tzinfo=timezone(timedelta(hours=1)))
+        raw = build_note_eml("me@example.com", "Reminder", "Text", "ABC1234567", when=when)
+        self.assertIsInstance(raw, bytes)
+        text = raw.decode("utf-8")
+        self.assertIn("From: me@example.com", text)
+        self.assertIn("To: me@example.com", text)
+        self.assertIn("Subject: Reminder", text)
+        self.assertIn("Date: Mon, 13 Jul 2026 14:30:00 +0100", text)
+        self.assertIn("Message ref. ABC1234567", text)
+
+    def test_default_filename(self):
+        from datetime import datetime, timezone
+        when = datetime(2026, 1, 5, 9, 0, tzinfo=timezone.utc)
+        self.assertEqual(
+            default_note_filename("ABC1234567", when=when),
+            "2026-01-05-message-ref-ABC1234567.eml",
+        )
 
 
 if __name__ == "__main__":

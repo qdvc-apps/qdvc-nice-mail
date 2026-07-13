@@ -49,12 +49,14 @@ qdvc/
     emoji.py                  EmojiCatalogue (from unicodedata), skin tones
     models.py                 Phrase, Profile dataclasses
     mailsig.py                assemble_signature()
+    note.py                   build_note_eml(), note_body(), default_note_filename()
     workspace.py              Workspace: scan/scaffold, CSV + txt I/O, CRUD
     ui_prefs.py               SHORTCUTS table, dropdown label tables
     gtk3/
         gtk3_emoji_tab.py     emoji TreeView; copy, favourites, labels, reorder
         gtk3_phrases_tab.py   phrases list (alphabetical + search) + add/edit/delete
         gtk3_signature_tab.py signature preview + copy
+        gtk3_note_tab.py      note-to-self: from/to, subject, body, Send -> .eml
 ```
 
 ## Data formats (this app)
@@ -106,6 +108,21 @@ the Profile choice persist via config keys `ref_only`, `include_disclaimer`,
 and `profile`; the signature preview font is config key `signature_font`
 (empty = built-in monospace), and the emoji skin tone is config key
 `skin_tone` (both set in Preferences).
+
+## Note to Self (EML)
+
+`qdvc/note.py` (pure) builds a self-addressed RFC 5322 message via the stdlib
+`email` package: `build_note_eml()` sets From and To to the same address, adds
+Subject and a Date header (defaults to now; injectable for tests), and sets the
+body to `note_body()` — the user's text, two blank lines, an m-dash, a blank
+line, and the `Message ref.` line (the same trailer as the Signature tab's
+Ref Only mode). `default_note_filename()` yields
+`yyyy-mm-dd-message-ref-<ref>.eml`. The From/To address persists via config key
+`note_email`; the tab's message ref is independent of the Signature tab's.
+`gtk3_note_tab.py` holds the three fields (address, subject, body) — all sharing
+the Signature preview font via `set_font()` — and a `Gtk.InfoBar` callout for
+the ref; Send runs `build_note_eml()` and offers a Save dialog. The Send button
+uses the `document-save` icon per the feature request.
 
 ## UI layout (the tab-bar-above-toolbar deviation)
 

@@ -39,6 +39,15 @@ top).
    **Ref Only** toggle strips everything but the m-dash and the message ref
    line; while it's on, the disclaimer toggle is disabled. The disclaimer,
    Ref Only, and profile choices persist between sessions.
+4. **Note to Self** — write a quick note and save it as an `.eml` you can send
+   to yourself. Fill in a **From / To** address (remembered between sessions), a
+   **subject**, and a plaintext **body**; a callout shows the message ref that
+   will be attached (**New Ref** regenerates it). **Send** (the disk icon) writes
+   a self-addressed `.eml` — From and To are the same address, dated now — whose
+   body is your text followed by the m-dash and message-ref trailer. You choose
+   where to save it; the default filename is
+   `yyyy-mm-dd-message-ref-<ref>.eml`. Its message ref is independent of the
+   Signature tab's.
 
 **Edit → Copy** (`Ctrl+C`) and **View → Refresh** (`Ctrl+R`) adapt to the active
 tab: Copy copies the selected emoji/phrase, or the whole signature; Refresh
@@ -120,8 +129,9 @@ python3 qdvc_nicemail.py --gtk4          # note + falls back to GTK 3
 
 Preferences (**Edit → Preferences**, `Ctrl+,`) let you switch the toolbar
 style between labels-beside-icons and labels-below-icons, choose the **emoji
-skin tone**, pick a **signature preview font** (with a Default button to
-restore the built-in monospace font), and toggle reopening the last workspace.
+skin tone**, pick a **signature preview font** (also used for the Note to Self
+fields, with a Default button to restore the built-in monospace font), and
+toggle reopening the last workspace.
 
 Every menu is reachable by mnemonic — **Alt+F** File, **Alt+E** Edit, **Alt+V**
 View, **Alt+H** Help — and menu items show their shortcuts inline.

@@ -98,8 +98,10 @@ class PreferencesDialog(Gtk.Dialog):
         font = button.get_font() or ""
         self.config.set("signature_font", font)
         self.main_window.signature_tab.set_font(font)
+        self.main_window.note_tab.set_font(font)
 
     def _on_font_reset(self, _button) -> None:  # noqa: ANN001
         self.config.set("signature_font", "")
         self.font_button.set_font("")
         self.main_window.signature_tab.set_font("")
+        self.main_window.note_tab.set_font("")

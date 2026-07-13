@@ -25,12 +25,14 @@ from ..platform_utils import reveal_in_file_manager  # noqa: E402
 from ..ui_prefs import EMOJI_BLOCKS, SHORTCUTS  # noqa: E402
 from ..workspace import Workspace  # noqa: E402
 from .gtk3_emoji_tab import EmojiTab  # noqa: E402
+from .gtk3_note_tab import NoteToSelfTab  # noqa: E402
 from .gtk3_phrases_tab import PhrasesTab  # noqa: E402
 from .gtk3_signature_tab import SignatureTab  # noqa: E402
 
 TAB_EMOJI = 0
 TAB_PHRASES = 1
 TAB_SIGNATURE = 2
+TAB_NOTE = 3
 
 
 class MainWindow(Gtk.ApplicationWindow):
@@ -57,7 +59,7 @@ class MainWindow(Gtk.ApplicationWindow):
         # --- tab bar (above toolbar) --------------------------------------
         self.notebook = Gtk.Notebook()
         self.notebook.set_show_border(False)
-        for label in ("Emoji", "Phrases", "Signature"):
+        for label in ("Emoji", "Phrases", "Signature", "Note to Self"):
             # Empty page: real content is rendered in self.content_stack below.
             tab_label = Gtk.Label(label=label)
             tab_label.set_margin_top(2)
@@ -85,20 +87,23 @@ class MainWindow(Gtk.ApplicationWindow):
         self._status_ctx = self.statusbar.get_context_id("main")
         root.pack_start(self.statusbar, False, False, 0)
 
-        # Build the three tabs + their toolbars.
+        # Build the tabs + their toolbars.
         self.emoji_tab = EmojiTab(self)
         self.phrases_tab = PhrasesTab(self)
         self.signature_tab = SignatureTab(self)
-        for t in (self.emoji_tab, self.phrases_tab, self.signature_tab):
+        self.note_tab = NoteToSelfTab(self)
+        for t in (self.emoji_tab, self.phrases_tab, self.signature_tab, self.note_tab):
             t.connect("status", lambda _w, msg: self.set_status(msg))
 
         self.content_stack.add_named(self.emoji_tab, "emoji")
         self.content_stack.add_named(self.phrases_tab, "phrases")
         self.content_stack.add_named(self.signature_tab, "signature")
+        self.content_stack.add_named(self.note_tab, "note")
 
         self.toolbar_stack.add_named(self._build_emoji_toolbar(), "emoji")
         self.toolbar_stack.add_named(self._build_phrases_toolbar(), "phrases")
         self.toolbar_stack.add_named(self._build_signature_toolbar(), "signature")
+        self.toolbar_stack.add_named(self._build_note_toolbar(), "note")
 
         self._wire_accelerators()
         self._show_tab(TAB_EMOJI)
@@ -203,6 +208,7 @@ class MainWindow(Gtk.ApplicationWindow):
         view_item.set_submenu(view_menu)
         for idx, (label, key) in enumerate((
             ("_Emoji", Gdk.KEY_1), ("_Phrases", Gdk.KEY_2), ("_Signature", Gdk.KEY_3),
+            ("_Note to Self", Gdk.KEY_4),
         )):
             mi = self._menu_item(label, accel=(key, Gdk.ModifierType.MOD1_MASK))
             mi.connect("activate", lambda _w, i=idx: self._show_tab(i))
@@ -424,6 +430,28 @@ class MainWindow(Gtk.ApplicationWindow):
 
         return tb
 
+    def _build_note_toolbar(self) -> Gtk.Toolbar:
+        tb = Gtk.Toolbar()
+        self._apply_toolbar_style(tb)
+
+        # Send: generates the .eml (icon is document-save, per spec).
+        send_btn = Gtk.ToolButton(label="Send")
+        send_btn.set_icon_name("document-save")
+        send_btn.set_is_important(True)
+        send_btn.connect("clicked", lambda *_: self.note_tab.send())
+        tb.insert(send_btn, -1)
+
+        tb.insert(Gtk.SeparatorToolItem(), -1)
+
+        # New Ref: refresh the note's message ref (independent of Signature).
+        refresh_btn = Gtk.ToolButton(label="New Ref")
+        refresh_btn.set_icon_name("view-refresh")
+        refresh_btn.set_is_important(True)
+        refresh_btn.connect("clicked", lambda *_: self.note_tab.refresh_message_ref())
+        tb.insert(refresh_btn, -1)
+
+        return tb
+
     def _on_profile_changed(self, combo: Gtk.ComboBoxText) -> None:
         name = combo.get_active_id()
         if name is not None:
@@ -482,7 +510,10 @@ class MainWindow(Gtk.ApplicationWindow):
         self.notebook.set_current_page(index)
 
     def _on_switch_page(self, _notebook, _page, index: int) -> None:  # noqa: ANN001
-        name = {TAB_EMOJI: "emoji", TAB_PHRASES: "phrases", TAB_SIGNATURE: "signature"}[index]
+        name = {
+            TAB_EMOJI: "emoji", TAB_PHRASES: "phrases",
+            TAB_SIGNATURE: "signature", TAB_NOTE: "note",
+        }[index]
         self.content_stack.set_visible_child_name(name)
         self.toolbar_stack.set_visible_child_name(name)
         self._update_actions_sensitivity()
@@ -577,13 +608,14 @@ class MainWindow(Gtk.ApplicationWindow):
         self._rebuild_toolbars()
 
     def _rebuild_toolbars(self) -> None:
-        for name in ("emoji", "phrases", "signature"):
+        for name in ("emoji", "phrases", "signature", "note"):
             child = self.toolbar_stack.get_child_by_name(name)
             if child is not None:
                 self.toolbar_stack.remove(child)
         self.toolbar_stack.add_named(self._build_emoji_toolbar(), "emoji")
         self.toolbar_stack.add_named(self._build_phrases_toolbar(), "phrases")
         self.toolbar_stack.add_named(self._build_signature_toolbar(), "signature")
+        self.toolbar_stack.add_named(self._build_note_toolbar(), "note")
         # Restore profile list if a workspace is open.
         if self.workspace:
             for prof in self.workspace.profiles:

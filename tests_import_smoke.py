@@ -73,6 +73,7 @@ def main() -> int:
         "qdvc.emoji",
         "qdvc.models",
         "qdvc.mailsig",
+        "qdvc.note",
         "qdvc.workspace",
         "qdvc.platform_utils",
         "qdvc.ui_prefs",
@@ -81,6 +82,7 @@ def main() -> int:
         "qdvc.gtk3.gtk3_emoji_tab",
         "qdvc.gtk3.gtk3_phrases_tab",
         "qdvc.gtk3.gtk3_signature_tab",
+        "qdvc.gtk3.gtk3_note_tab",
         "qdvc.gtk3.gtk3_preferences",
         "qdvc.gtk3.gtk3_shortcuts",
     ]

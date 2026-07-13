@@ -5,7 +5,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GObject, Gtk  # noqa: E402
+from gi.repository import Gdk, GObject, Gtk, Pango  # noqa: E402
 
 from ..mailsig import assemble_signature  # noqa: E402
 from ..naming import generate_message_ref  # noqa: E402
@@ -19,8 +19,9 @@ class SignatureTab(Gtk.Box):
     def __init__(self, window) -> None:  # noqa: ANN001
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.window = window
-        self.profile_name: str | None = None
-        self.include_disclaimer = True
+        self.profile_name: str | None = window.config.get("profile")
+        self.include_disclaimer = bool(window.config.get("include_disclaimer", True))
+        self.ref_only = bool(window.config.get("ref_only", False))
         self.message_ref = generate_message_ref()
 
         self.buffer = Gtk.TextBuffer()
@@ -37,6 +38,9 @@ class SignatureTab(Gtk.Box):
         scroller.add(self.textview)
         self.pack_start(scroller, True, True, 0)
 
+        # Apply any persisted custom preview font.
+        self.set_font(self.window.config.get("signature_font", "") or "")
+
     # ---- toolbar-driven state -------------------------------------------
     def set_profile(self, name: str | None) -> None:
         self.profile_name = name
@@ -45,6 +49,19 @@ class SignatureTab(Gtk.Box):
     def set_include_disclaimer(self, value: bool) -> None:
         self.include_disclaimer = value
         self.reload()
+
+    def set_ref_only(self, value: bool) -> None:
+        self.ref_only = value
+        self.reload()
+
+    def set_font(self, font_desc: str) -> None:
+        """Override the preview font. Empty string restores the default."""
+        if font_desc:
+            self.textview.override_font(Pango.FontDescription(font_desc))
+            self.textview.set_monospace(False)
+        else:
+            self.textview.override_font(None)
+            self.textview.set_monospace(True)
 
     def refresh_message_ref(self) -> None:
         self.message_ref = generate_message_ref()
@@ -65,9 +82,10 @@ class SignatureTab(Gtk.Box):
             disclaimer=ws.disclaimer,
             include_disclaimer=self.include_disclaimer,
             message_ref=self.message_ref,
+            ref_only=self.ref_only,
         )
         self.buffer.set_text(text)
-        self.emit("status", "Signature ready.")
+        self.emit("status", "Signature ready (ref only)." if self.ref_only else "Signature ready.")
 
     def current_text(self) -> str:
         start, end = self.buffer.get_bounds()

@@ -17,21 +17,27 @@ top).
 
 1. **Emoji** — a table of emoji, one per row (symbol, name, and your optional
    user label). Select a row and press **Ctrl+C** to copy the emoji. The
-   toolbar offers a **block** dropdown (*Favourites* by default, or *All Emoji*
-   — the full Unicode set), a **skin-tone** dropdown, an **Add Custom** button,
-   **Move Up/Down** buttons to reorder favourites, and a **search** box that
-   matches the emoji name, description, or your user label. **Right-click** any
-   emoji to add it to (or remove it from) your favourites, set a **user label**
-   on a favourite, or move it up/down. If an emoji isn't in the list (many
-   multi-part emoji such as ❤️‍🩹 have no single Unicode name and so aren't
-   generated), use **Add Custom** to paste it in; it's saved to your favourites
-   and also shown in *All Emoji*, noted as a custom emoji.
+   toolbar's first row offers a **block** dropdown (*Favourites* by default, or
+   *All Emoji* — the full Unicode set), an **Add Custom** button, **Move
+   Up/Down** buttons to reorder favourites, and a **Copy** button; a second row
+   holds the **search** box, which matches the emoji name, description, or your
+   user label. The **skin tone** is set in *Edit → Preferences* and persists
+   between sessions. **Right-click** any emoji to add it to (or remove it from)
+   your favourites, set a **user label** on a favourite, or move it up/down. If
+   an emoji isn't in the list (many multi-part emoji such as ❤️‍🩹 have no single
+   Unicode name and so aren't generated), use **Add Custom** to paste it in;
+   it's saved to your favourites and also shown in *All Emoji*, noted as a
+   custom emoji.
 2. **Phrases** — your common phrases, with toolbar buttons to **add**, **edit**,
    **delete**, and **Move Up/Down** to reorder. Select one and Ctrl+C (or the
    Copy button) to copy it.
 3. **Signature** — assembles a plaintext signature. Pick a **profile** in the
    toolbar, toggle the **disclaimer** on/off, and hit **New Ref** (or **F5**)
-   for a fresh message reference. Copy the result with the Copy button.
+   for a fresh message reference. Copy the result with the Copy button. A
+   **Ref Only** toggle (also in the *Signature* menu) strips everything but the
+   m-dash and the message ref line; while it's on, the disclaimer toggle is
+   disabled. The disclaimer, Ref Only, and profile choices persist between
+   sessions.
 
 **Edit → Copy** (`Ctrl+C`) and **View → Refresh** (`Ctrl+R`) adapt to the active
 tab: Copy copies the selected emoji/phrase, or the whole signature; Refresh
@@ -109,8 +115,13 @@ python3 qdvc_nicemail.py --gtk4          # note + falls back to GTK 3
 ```
 
 Preferences (**Edit → Preferences**, `Ctrl+,`) let you switch the toolbar
-style between labels-beside-icons and labels-below-icons, and toggle reopening
-the last workspace.
+style between labels-beside-icons and labels-below-icons, choose the **emoji
+skin tone**, pick a **signature preview font** (with a Default button to
+restore the built-in monospace font), and toggle reopening the last workspace.
+
+Every menu is reachable by mnemonic — **Alt+F** File, **Alt+E** Edit, **Alt+V**
+View, **Alt+S** Signature, **Alt+H** Help — and menu items show their
+shortcuts inline.
 
 ## Desktop launcher
 

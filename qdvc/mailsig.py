@@ -12,6 +12,7 @@ def assemble_signature(
     disclaimer: str,
     include_disclaimer: bool,
     message_ref: str,
+    ref_only: bool = False,
 ) -> str:
     """Assemble the plaintext mail signature.
 
@@ -26,7 +27,17 @@ def assemble_signature(
         [Disclaimer: <disclaimer>]
 
         Message ref. <ref>
+
+    In `ref_only` mode the signature is just the m-dash, a blank line, and the
+    message ref line — nothing else:
+
+        —
+
+        Message ref. <ref>
     """
+    if ref_only:
+        return f"{MDASH}\n\nMessage ref. {message_ref}\n"
+
     parts: list[str] = []
 
     signoff = (signoff or "").rstrip("\n")

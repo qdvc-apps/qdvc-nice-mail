@@ -22,7 +22,7 @@ from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from .. import APP_NAME, __version__  # noqa: E402
 from ..platform_utils import reveal_in_file_manager  # noqa: E402
-from ..ui_prefs import EMOJI_BLOCKS, SKIN_TONE_LABELS, SHORTCUTS  # noqa: E402
+from ..ui_prefs import EMOJI_BLOCKS, SHORTCUTS  # noqa: E402
 from ..workspace import Workspace  # noqa: E402
 from .gtk3_emoji_tab import EmojiTab  # noqa: E402
 from .gtk3_phrases_tab import PhrasesTab  # noqa: E402
@@ -122,77 +122,64 @@ class MainWindow(Gtk.ApplicationWindow):
         icon: str | None = None,
         accel: tuple[int, int] | None = None,
     ) -> Gtk.MenuItem:
-        """A menu item with a fixed icon slot, label, and optional accel hint.
+        """A native GTK3 menu item.
 
-        `accel` is a (keyval, modifier) pair; when given, the accelerator is
-        both attached to the item and displayed right-aligned, and the item is
-        returned ready to have its `activate` handler connected.
+        Uses `Gtk.ImageMenuItem` when an icon is given (so GTK handles icon /
+        checkmark reservation, left alignment, and accelerator rendering
+        natively) and a mnemonic `Gtk.MenuItem` otherwise. `label` may contain
+        an underscore mnemonic (e.g. "_Copy"). `accel` is a (keyval, modifier)
+        pair; when given it is attached with VISIBLE so GTK draws the shortcut.
         """
-        item = Gtk.MenuItem()
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-
-        # Fixed-width icon slot keeps every label left-aligned to the same x,
-        # whether or not the item has an icon (fixes uneven left padding).
-        icon_slot = Gtk.Box()
-        icon_slot.set_size_request(16, 16)
         resolved = self._resolve_icon(icon) if icon else None
         if resolved:
-            icon_slot.pack_start(
-                Gtk.Image.new_from_icon_name(resolved, Gtk.IconSize.MENU),
-                False, False, 0,
-            )
-        box.pack_start(icon_slot, False, False, 0)
-
-        box.pack_start(Gtk.Label(label=label, xalign=0.0), True, True, 0)
+            item = Gtk.ImageMenuItem.new_with_mnemonic(label)
+            item.set_image(Gtk.Image.new_from_icon_name(resolved, Gtk.IconSize.MENU))
+            item.set_always_show_image(True)
+        else:
+            item = Gtk.MenuItem.new_with_mnemonic(label)
 
         if accel is not None:
             keyval, mods = accel
-            accel_label = Gtk.Label(label=Gtk.accelerator_get_label(keyval, mods))
-            accel_label.get_style_context().add_class("accelerator")
-            accel_label.set_sensitive(False)
-            box.pack_end(accel_label, False, False, 0)
             item.add_accelerator(
                 "activate", self.accel_group, keyval, mods, Gtk.AccelFlags.VISIBLE,
             )
-
-        item.add(box)
         return item
 
     def _build_menubar(self) -> Gtk.MenuBar:
         menubar = Gtk.MenuBar()
 
-        # File
+        # File  (Alt+F)
         file_menu = Gtk.Menu()
-        file_item = Gtk.MenuItem(label="File")
+        file_item = Gtk.MenuItem.new_with_mnemonic("_File")
         file_item.set_submenu(file_menu)
 
         self.mi_open = self._menu_item(
-            "Open Workspace…", "document-open",
+            "_Open Workspace…", "document-open",
             accel=(Gdk.KEY_o, Gdk.ModifierType.CONTROL_MASK),
         )
         self.mi_open.connect("activate", lambda *_: self.choose_workspace())
         file_menu.append(self.mi_open)
 
-        self.mi_reveal = self._menu_item("Reveal Workspace in File Manager", "folder")
+        self.mi_reveal = self._menu_item("_Reveal Workspace in File Manager", "folder")
         self.mi_reveal.connect("activate", lambda *_: self._reveal_workspace())
         file_menu.append(self.mi_reveal)
 
         file_menu.append(Gtk.SeparatorMenuItem())
         mi_quit = self._menu_item(
-            "Quit", "application-exit",
+            "_Quit", "application-exit",
             accel=(Gdk.KEY_q, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_quit.connect("activate", lambda *_: self.app.quit())
         file_menu.append(mi_quit)
         menubar.append(file_item)
 
-        # Edit
+        # Edit  (Alt+E)
         edit_menu = Gtk.Menu()
-        edit_item = Gtk.MenuItem(label="Edit")
+        edit_item = Gtk.MenuItem.new_with_mnemonic("_Edit")
         edit_item.set_submenu(edit_menu)
 
         mi_copy = self._menu_item(
-            "Copy", "edit-copy",
+            "_Copy", "edit-copy",
             accel=(Gdk.KEY_c, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_copy.connect("activate", lambda *_: self.copy_current_tab())
@@ -200,37 +187,49 @@ class MainWindow(Gtk.ApplicationWindow):
         edit_menu.append(Gtk.SeparatorMenuItem())
 
         mi_prefs = self._menu_item(
-            "Preferences", "preferences-system",
+            "_Preferences", "preferences-system",
             accel=(Gdk.KEY_comma, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_prefs.connect("activate", lambda *_: self._open_preferences())
         edit_menu.append(mi_prefs)
         menubar.append(edit_item)
 
-        # View
+        # View  (Alt+V)
         view_menu = Gtk.Menu()
-        view_item = Gtk.MenuItem(label="View")
+        view_item = Gtk.MenuItem.new_with_mnemonic("_View")
         view_item.set_submenu(view_menu)
         for idx, (label, key) in enumerate((
-            ("Emoji", Gdk.KEY_1), ("Phrases", Gdk.KEY_2), ("Signature", Gdk.KEY_3),
+            ("_Emoji", Gdk.KEY_1), ("_Phrases", Gdk.KEY_2), ("_Signature", Gdk.KEY_3),
         )):
             mi = self._menu_item(label, accel=(key, Gdk.ModifierType.MOD1_MASK))
             mi.connect("activate", lambda _w, i=idx: self._show_tab(i))
             view_menu.append(mi)
         view_menu.append(Gtk.SeparatorMenuItem())
         mi_refresh = self._menu_item(
-            "Refresh", "view-refresh",
+            "_Refresh", "view-refresh",
             accel=(Gdk.KEY_r, Gdk.ModifierType.CONTROL_MASK),
         )
         mi_refresh.connect("activate", lambda *_: self.refresh_current_tab())
         view_menu.append(mi_refresh)
         menubar.append(view_item)
 
-        # Help
+        # Signature  (Alt+S) — Ref Only mode toggle.
+        sig_menu = Gtk.Menu()
+        sig_item = Gtk.MenuItem.new_with_mnemonic("_Signature")
+        sig_item.set_submenu(sig_menu)
+        self.mi_ref_only = Gtk.CheckMenuItem.new_with_mnemonic("_Ref Only Mode")
+        self.mi_ref_only.set_active(bool(self.config.get("ref_only", False)))
+        self._ref_only_handler = self.mi_ref_only.connect(
+            "toggled", self._on_ref_only_toggled
+        )
+        sig_menu.append(self.mi_ref_only)
+        menubar.append(sig_item)
+
+        # Help  (Alt+H)
         help_menu = Gtk.Menu()
-        help_item = Gtk.MenuItem(label="Help")
+        help_item = Gtk.MenuItem.new_with_mnemonic("_Help")
         help_item.set_submenu(help_menu)
-        mi_about = self._menu_item("About", "help-about")
+        mi_about = self._menu_item("_About", "help-about")
         mi_about.connect("activate", lambda *_: self._show_about())
         help_menu.append(mi_about)
         menubar.append(help_item)
@@ -242,7 +241,11 @@ class MainWindow(Gtk.ApplicationWindow):
         below = self.config.toolbar_style == "below"
         toolbar.set_style(Gtk.ToolbarStyle.BOTH if below else Gtk.ToolbarStyle.BOTH_HORIZ)
 
-    def _build_emoji_toolbar(self) -> Gtk.Toolbar:
+    def _build_emoji_toolbar(self) -> Gtk.Box:
+        # The emoji toolbar spans two rows: controls on the first, the search
+        # box on its own second row. Returned as a vertical Box holding two
+        # Gtk.Toolbars (the stack accepts any widget).
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         tb = Gtk.Toolbar()
         self._apply_toolbar_style(tb)
 
@@ -263,23 +266,6 @@ class MainWindow(Gtk.ApplicationWindow):
         block_item.add(block_box)
         tb.insert(block_item, -1)
 
-        # Skin tone dropdown.
-        tone_item = Gtk.ToolItem()
-        tone_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
-        tone_box.pack_start(Gtk.Label(label="Skin tone:"), False, False, 2)
-        self.tone_combo = Gtk.ComboBoxText()
-        for tid, tlabel in SKIN_TONE_LABELS:
-            self.tone_combo.append(tid, tlabel)
-        self.tone_combo.set_active_id("none")
-        # Pin width so hovering the dropdown does not resize other items.
-        self.tone_combo.set_size_request(140, -1)
-        self.tone_combo.connect(
-            "changed", lambda c: self.emoji_tab.set_skin_tone(c.get_active_id() or "none")
-        )
-        tone_box.pack_start(self.tone_combo, False, False, 0)
-        tone_item.add(tone_box)
-        tb.insert(tone_item, -1)
-
         tb.insert(Gtk.SeparatorToolItem(), -1)
 
         # Add a custom (pasted) emoji to favourites.
@@ -293,18 +279,6 @@ class MainWindow(Gtk.ApplicationWindow):
         tb.insert(custom_btn, -1)
 
         tb.insert(Gtk.SeparatorToolItem(), -1)
-
-        # Search entry.
-        search_item = Gtk.ToolItem()
-        self.search_entry = Gtk.SearchEntry()
-        self.search_entry.set_placeholder_text("Search name, description or label…")
-        self.search_entry.set_width_chars(28)
-        self.search_entry.connect(
-            "search-changed", lambda e: self.emoji_tab.set_query(e.get_text())
-        )
-        search_item.add(self.search_entry)
-        search_item.set_expand(True)
-        tb.insert(search_item, -1)
 
         # Move up/down (reorders favourites).
         up_btn = Gtk.ToolButton(label="Move Up")
@@ -328,7 +302,27 @@ class MainWindow(Gtk.ApplicationWindow):
         copy_btn.connect("clicked", lambda *_: self.emoji_tab.copy_selected())
         tb.insert(copy_btn, -1)
 
-        return tb
+        container.pack_start(tb, False, False, 0)
+
+        # Second row: search box.
+        tb2 = Gtk.Toolbar()
+        self._apply_toolbar_style(tb2)
+        search_item = Gtk.ToolItem()
+        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        search_box.pack_start(Gtk.Label(label="Search:"), False, False, 2)
+        self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_placeholder_text("Search name, description or label…")
+        self.search_entry.set_width_chars(40)
+        self.search_entry.connect(
+            "search-changed", lambda e: self.emoji_tab.set_query(e.get_text())
+        )
+        search_box.pack_start(self.search_entry, True, True, 0)
+        search_item.add(search_box)
+        search_item.set_expand(True)
+        tb2.insert(search_item, -1)
+        container.pack_start(tb2, False, False, 0)
+
+        return container
 
     def _build_phrases_toolbar(self) -> Gtk.Toolbar:
         tb = Gtk.Toolbar()
@@ -385,6 +379,8 @@ class MainWindow(Gtk.ApplicationWindow):
         prof_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
         prof_box.pack_start(Gtk.Label(label="Profile:"), False, False, 2)
         self.profile_combo = Gtk.ComboBoxText()
+        # Pin width so focus/prelight states can't relayout the toolbar.
+        self.profile_combo.set_size_request(160, -1)
         self.profile_combo.connect("changed", self._on_profile_changed)
         prof_box.pack_start(self.profile_combo, False, False, 0)
         prof_item.add(prof_box)
@@ -399,6 +395,14 @@ class MainWindow(Gtk.ApplicationWindow):
         self.disclaimer_toggle.set_active(bool(self.config.get("include_disclaimer", True)))
         self.disclaimer_toggle.connect("toggled", self._on_disclaimer_toggled)
         tb.insert(self.disclaimer_toggle, -1)
+
+        # Ref Only mode toggle (mirrors the Signature menu check item).
+        self.ref_only_toggle = Gtk.ToggleToolButton(label="Ref Only")
+        self.ref_only_toggle.set_icon_name("format-justify-left")
+        self.ref_only_toggle.set_is_important(True)
+        self.ref_only_toggle.set_active(bool(self.config.get("ref_only", False)))
+        self.ref_only_toggle.connect("toggled", self._on_ref_only_toggled)
+        tb.insert(self.ref_only_toggle, -1)
 
         # Refresh message ref.
         refresh_btn = Gtk.ToolButton(label="New Ref")
@@ -415,14 +419,46 @@ class MainWindow(Gtk.ApplicationWindow):
         copy_btn.connect("clicked", lambda *_: self.signature_tab.copy_signature())
         tb.insert(copy_btn, -1)
 
+        # Reflect the persisted Ref Only state (disables the disclaimer toggle).
+        self._apply_ref_only_state(bool(self.config.get("ref_only", False)))
+
         return tb
 
     def _on_profile_changed(self, combo: Gtk.ComboBoxText) -> None:
-        self.signature_tab.set_profile(combo.get_active_id())
+        name = combo.get_active_id()
+        if name is not None:
+            self.config.set("profile", name)
+        self.signature_tab.set_profile(name)
 
     def _on_disclaimer_toggled(self, btn: Gtk.ToggleToolButton) -> None:
         self.config.set("include_disclaimer", btn.get_active())
         self.signature_tab.set_include_disclaimer(btn.get_active())
+
+    def _on_ref_only_toggled(self, widget) -> None:  # noqa: ANN001
+        """Handler shared by the toolbar toggle and the menu check item."""
+        active = widget.get_active()
+        self.config.set("ref_only", active)
+        self._apply_ref_only_state(active)
+
+    def _apply_ref_only_state(self, active: bool) -> None:
+        """Sync both Ref Only controls, disable disclaimer when on, re-render."""
+        # Keep the toolbar toggle and menu check item in agreement without
+        # re-triggering their handlers.
+        toggle = getattr(self, "ref_only_toggle", None)
+        if toggle is not None and toggle.get_active() != active:
+            toggle.handler_block_by_func(self._on_ref_only_toggled)
+            toggle.set_active(active)
+            toggle.handler_unblock_by_func(self._on_ref_only_toggled)
+        menu_item = getattr(self, "mi_ref_only", None)
+        if menu_item is not None and menu_item.get_active() != active:
+            menu_item.handler_block(self._ref_only_handler)
+            menu_item.set_active(active)
+            menu_item.handler_unblock(self._ref_only_handler)
+        # Disclaimer is meaningless in Ref Only mode.
+        disc = getattr(self, "disclaimer_toggle", None)
+        if disc is not None:
+            disc.set_sensitive(not active)
+        self.signature_tab.set_ref_only(active)
 
     # ---- accelerators ----------------------------------------------------
     def _wire_accelerators(self) -> None:

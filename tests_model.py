@@ -143,6 +143,16 @@ class WorkspaceTests(unittest.TestCase):
         sig = assemble_signature(self.ws.signoff, prof, self.ws.disclaimer, False, "ABC1234567")
         self.assertNotIn("Disclaimer:", sig)
 
+    def test_signature_ref_only(self):
+        prof = self.ws.get_profile(None)
+        sig = assemble_signature(
+            self.ws.signoff, prof, self.ws.disclaimer, True, "ABC1234567", ref_only=True
+        )
+        # Only the m-dash, a blank line, and the message ref line.
+        self.assertEqual(sig, "\u2014\n\nMessage ref. ABC1234567\n")
+        self.assertNotIn("Kind regards", sig)
+        self.assertNotIn("Disclaimer:", sig)
+
 
 if __name__ == "__main__":
     unittest.main()

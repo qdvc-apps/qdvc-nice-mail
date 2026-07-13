@@ -20,6 +20,8 @@ DEFAULTS: dict[str, Any] = {
     "emoji_block": "favourites",
     "profile": None,
     "include_disclaimer": True,
+    "ref_only": False,
+    "signature_font": "",
 }
 
 _VALID_TOOLBAR = {"beside", "below"}

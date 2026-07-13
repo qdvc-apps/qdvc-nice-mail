@@ -19,6 +19,14 @@ the spec.
   menubar → single toolbar → content. This app instead shows a tab bar between
   the menubar and the toolbar, with a *different toolbar per tab*. See "UI
   layout" below for how this is built.
+- **`Gtk.ImageMenuItem` menubar.** The spec discourages the deprecated
+  `Gtk.ImageMenuItem` in favour of a custom `Box(Image + Label)` in a plain
+  `Gtk.MenuItem`. That custom child broke left padding, native accelerator
+  display, and mnemonic alignment, so this app deliberately uses
+  `Gtk.ImageMenuItem` (with `set_always_show_image(True)`) plus mnemonic labels
+  instead. The project owner has accepted this deviation and will amend the
+  spec to prioritise a correct menubar over GTK 4 forward-compatibility in a
+  GTK 3-only app.
 
 ## Runtime note specific to this app
 
@@ -87,7 +95,12 @@ the move-up/move-down feature.
 `assemble_signature()` (pure, in `qdvc/mailsig.py`) joins blocks with a single
 blank line, except that an **extra** blank line precedes the m-dash (two blank
 lines between the signoff and the m-dash). The message ref uses the reduced,
-unambiguous alphabet in `qdvc/naming.py`.
+unambiguous alphabet in `qdvc/naming.py`. In `ref_only` mode the function
+returns just the m-dash, a blank line, and the `Message ref.` line — nothing
+else. The Ref Only and Disclaimer toggles and the Profile choice persist via
+config keys `ref_only`, `include_disclaimer`, and `profile`; the signature
+preview font is config key `signature_font` (empty = built-in monospace), and
+the emoji skin tone is config key `skin_tone` (both set in Preferences).
 
 ## UI layout (the tab-bar-above-toolbar deviation)
 
@@ -95,25 +108,31 @@ The main window stacks, top to bottom: menubar, a `Gtk.Notebook` used **only
 for its tab bar** (its pages are empty), a `Gtk.Stack` of per-tab toolbars, the
 content `Gtk.Stack`, and a statusbar. Switching notebook pages swaps both the
 toolbar stack and the content stack (`_on_switch_page`), so each tab shows its
-own toolbar between the tab bar and the content.
+own toolbar between the tab bar and the content. The emoji "toolbar" is a
+vertical `Gtk.Box` of two `Gtk.Toolbar` rows (controls, then the search box on
+its own row); the stack accepts any widget, not just a `Gtk.Toolbar`.
 
-Two menu commands are tab-adaptive and dispatch on the active page:
-`copy_current_tab` (Edit → Copy, Ctrl+C) and `refresh_current_tab` (View →
-Refresh, Ctrl+R); the latter rescans the workspace and, on the Signature tab,
-also generates a new message ref.
+Three menu commands are tab-adaptive or stateful: `copy_current_tab`
+(Edit → Copy, Ctrl+C) and `refresh_current_tab` (View → Refresh, Ctrl+R)
+dispatch on the active page (Refresh rescans the workspace and, on the
+Signature tab, also generates a new message ref); the Signature menu's
+Ref Only check item and the Signature toolbar's Ref Only toggle share the
+`_on_ref_only_toggled` handler and are kept in sync (without re-entrancy) by
+`_apply_ref_only_state`, which also disables the Disclaimer toggle while on.
 
-Menu items are built by `_menu_item(label, icon, accel)`: a fixed-width icon
-slot keeps every label aligned to the same x-offset (with or without an icon),
-and when an `accel` pair is passed the accelerator is both attached to the item
-and shown right-aligned via `Gtk.accelerator_get_label`. Icon names go through
-`_resolve_icon`, which walks a per-name fallback chain and returns the first
-name present in the theme, or `None` (leaving the slot blank rather than
-rendering a broken image) — e.g. `help-about` falls back through
-`help-browser` / `help-contents` to the near-universal `dialog-information`.
+Menu items are built by `_menu_item(label, icon, accel)`: it uses
+`Gtk.ImageMenuItem.new_with_mnemonic` when an icon resolves (so GTK handles
+icon/checkmark reservation, left alignment, and native accelerator rendering)
+and `Gtk.MenuItem.new_with_mnemonic` otherwise. Labels carry underscore
+mnemonics, and top-level menus use them too (`_File` → Alt+F, etc.). Icon names
+go through `_resolve_icon`, which walks a per-name fallback chain and returns
+the first name present in the theme, or `None` — e.g. `help-about` falls back
+through `help-browser` / `help-contents` to the near-universal
+`dialog-information`.
 `PreferencesDialog` stores its parent as `main_window` (not `window`, which
 collides with a read-only `Gtk.Window` GObject field).
-Toolbar combo boxes are given a fixed width so focus/prelight states cannot
-relayout neighbouring items.
+Toolbar combo boxes (emoji Block, Signature Profile) are given a fixed width so
+focus/prelight states cannot relayout neighbouring items.
 
 Action sensitivity is centralised in `_update_actions_sensitivity`.
 

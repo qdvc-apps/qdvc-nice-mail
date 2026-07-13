@@ -26,7 +26,7 @@ class EmojiTab(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.window = window
         self.block = "favourites"
-        self.skin_tone = "none"
+        self.skin_tone = window.config.get("skin_tone", "none") or "none"
         self.query = ""
 
         # id, symbol(display), name, user label

@@ -41,16 +41,19 @@ class EmojiTab(Gtk.Box):
         symbol_renderer.set_property("scale", 1.6)
         col_symbol = Gtk.TreeViewColumn("Emoji", symbol_renderer, text=self.COL_SYMBOL)
         col_symbol.set_min_width(70)
+        col_symbol.set_resizable(True)
         self.view.append_column(col_symbol)
 
         name_renderer = Gtk.CellRendererText()
         col_name = Gtk.TreeViewColumn("Name", name_renderer, text=self.COL_NAME)
         col_name.set_expand(True)
+        col_name.set_resizable(True)
         self.view.append_column(col_name)
 
         label_renderer = Gtk.CellRendererText()
         col_label = Gtk.TreeViewColumn("User label", label_renderer, text=self.COL_LABEL)
         col_label.set_min_width(140)
+        col_label.set_resizable(True)
         self.view.append_column(col_label)
 
         # Ctrl+C to copy the selected emoji.

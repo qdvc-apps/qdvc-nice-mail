@@ -29,9 +29,10 @@ top).
    Unicode name and so aren't generated), use **Add Custom** to paste it in;
    it's saved to your favourites and also shown in *All Emoji*, noted as a
    custom emoji.
-2. **Phrases** — your common phrases, with toolbar buttons to **add**, **edit**,
-   **delete**, and **Move Up/Down** to reorder. Select one and Ctrl+C (or the
-   Copy button) to copy it.
+2. **Phrases** — your common phrases, listed alphabetically, with toolbar
+   buttons to **add**, **edit**, and **delete**, plus a **search** box on a
+   second row (**Ctrl+F** jumps to it). Select one and Ctrl+C (or the Copy
+   button) to copy it.
 3. **Signature** — assembles a plaintext signature. Pick a **profile** in the
    toolbar, toggle the **disclaimer** on/off, and hit **New Ref** (or **F5**)
    for a fresh message reference. Copy the result with the Copy button. A
@@ -43,6 +44,9 @@ top).
 tab: Copy copies the selected emoji/phrase, or the whole signature; Refresh
 reloads the table from disk, and on the Signature tab also generates a new
 message ref.
+
+Table columns (in the Emoji and Phrases tabs) can be resized by dragging their
+header edges.
 
 ## The workspace folder
 

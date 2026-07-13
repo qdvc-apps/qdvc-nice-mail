@@ -19,6 +19,7 @@ class PhrasesTab(Gtk.Box):
     def __init__(self, window) -> None:  # noqa: ANN001
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.window = window
+        self.query = ""
 
         self.store = Gtk.ListStore(str, str)
         self.view = Gtk.TreeView(model=self.store)
@@ -27,6 +28,7 @@ class PhrasesTab(Gtk.Box):
         renderer = Gtk.CellRendererText()
         col = Gtk.TreeViewColumn("Phrase", renderer, text=self.COL_TEXT)
         col.set_expand(True)
+        col.set_resizable(True)
         self.view.append_column(col)
 
         self.view.connect("key-press-event", self._on_key_press)
@@ -37,6 +39,11 @@ class PhrasesTab(Gtk.Box):
         scroller.add(self.view)
         self.pack_start(scroller, True, True, 0)
 
+    # ---- search ----------------------------------------------------------
+    def set_query(self, text: str) -> None:
+        self.query = text or ""
+        self.reload()
+
     # ---- data ------------------------------------------------------------
     def reload(self) -> None:
         self.store.clear()
@@ -44,9 +51,17 @@ class PhrasesTab(Gtk.Box):
         if ws is None:
             self.emit("status", "Open a workspace to see phrases.")
             return
-        for p in ws.phrases:
+        # Alphabetical (case-insensitive) by phrase text.
+        phrases = sorted(ws.phrases, key=lambda p: p.text.lower())
+        q = self.query.strip().lower()
+        if q:
+            phrases = [p for p in phrases if q in p.text.lower()]
+        for p in phrases:
             self.store.append([p.id, p.text])
-        self.emit("status", f"{len(ws.phrases)} phrases.")
+        if q:
+            self.emit("status", f"{len(phrases)} phrases match.")
+        else:
+            self.emit("status", f"{len(ws.phrases)} phrases.")
 
     def _selected(self):
         model, tree_iter = self.view.get_selection().get_selected()
@@ -131,22 +146,3 @@ class PhrasesTab(Gtk.Box):
             ws.delete_phrase(pid)
             self.reload()
             self.emit("status", "Phrase deleted.")
-
-    def move_selected(self, delta: int) -> None:
-        """Move the selected phrase up (-1) or down (+1)."""
-        ws = self.window.workspace
-        pid, _ = self._selected()
-        if ws is None or pid is None:
-            return
-        if ws.move_phrase(pid, delta):
-            self.reload()
-            self._reselect(pid)
-
-    def _reselect(self, pid: str) -> None:
-        tree_iter = self.store.get_iter_first()
-        while tree_iter is not None:
-            if self.store.get_value(tree_iter, self.COL_ID) == pid:
-                self.view.get_selection().select_iter(tree_iter)
-                self.view.scroll_to_cell(self.store.get_path(tree_iter), None, False, 0, 0)
-                break
-            tree_iter = self.store.iter_next(tree_iter)

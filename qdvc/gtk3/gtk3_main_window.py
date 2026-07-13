@@ -315,7 +315,10 @@ class MainWindow(Gtk.ApplicationWindow):
 
         return container
 
-    def _build_phrases_toolbar(self) -> Gtk.Toolbar:
+    def _build_phrases_toolbar(self) -> Gtk.Box:
+        # Two rows: controls on the first, the search box on its own second row
+        # (mirrors the emoji toolbar).
+        container = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         tb = Gtk.Toolbar()
         self._apply_toolbar_style(tb)
 
@@ -339,27 +342,33 @@ class MainWindow(Gtk.ApplicationWindow):
 
         tb.insert(Gtk.SeparatorToolItem(), -1)
 
-        up_btn = Gtk.ToolButton(label="Move Up")
-        up_btn.set_icon_name("go-up")
-        up_btn.set_is_important(True)
-        up_btn.connect("clicked", lambda *_: self.phrases_tab.move_selected(-1))
-        tb.insert(up_btn, -1)
-
-        down_btn = Gtk.ToolButton(label="Move Down")
-        down_btn.set_icon_name("go-down")
-        down_btn.set_is_important(True)
-        down_btn.connect("clicked", lambda *_: self.phrases_tab.move_selected(1))
-        tb.insert(down_btn, -1)
-
-        tb.insert(Gtk.SeparatorToolItem(), -1)
-
         copy_btn = Gtk.ToolButton(label="Copy")
         copy_btn.set_icon_name("edit-copy")
         copy_btn.set_is_important(True)
         copy_btn.connect("clicked", lambda *_: self.phrases_tab.copy_selected())
         tb.insert(copy_btn, -1)
 
-        return tb
+        container.pack_start(tb, False, False, 0)
+
+        # Second row: search box.
+        tb2 = Gtk.Toolbar()
+        self._apply_toolbar_style(tb2)
+        search_item = Gtk.ToolItem()
+        search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=4)
+        search_box.pack_start(Gtk.Label(label="Search:"), False, False, 2)
+        self.phrases_search_entry = Gtk.SearchEntry()
+        self.phrases_search_entry.set_placeholder_text("Search phrases…")
+        self.phrases_search_entry.set_width_chars(40)
+        self.phrases_search_entry.connect(
+            "search-changed", lambda e: self.phrases_tab.set_query(e.get_text())
+        )
+        search_box.pack_start(self.phrases_search_entry, True, True, 0)
+        search_item.add(search_box)
+        search_item.set_expand(True)
+        tb2.insert(search_item, -1)
+        container.pack_start(tb2, False, False, 0)
+
+        return container
 
     def _build_signature_toolbar(self) -> Gtk.Toolbar:
         tb = Gtk.Toolbar()
@@ -452,16 +461,19 @@ class MainWindow(Gtk.ApplicationWindow):
             Gdk.KEY_F5, 0, Gtk.AccelFlags.VISIBLE,
             lambda *a: (self.signature_tab.refresh_message_ref() or True),
         )
-        # Ctrl+F -> focus the emoji search box (when the emoji tab is active).
+        # Ctrl+F -> focus the active tab's search box (emoji or phrases).
         self.accel_group.connect(
             Gdk.KEY_f, Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
-            lambda *a: (self._focus_emoji_search() or True),
+            lambda *a: (self._focus_search() or True),
         )
 
-    def _focus_emoji_search(self) -> None:
-        if self._current_tab_index() != TAB_EMOJI:
-            return
-        entry = getattr(self, "search_entry", None)
+    def _focus_search(self) -> None:
+        idx = self._current_tab_index()
+        entry = None
+        if idx == TAB_EMOJI:
+            entry = getattr(self, "search_entry", None)
+        elif idx == TAB_PHRASES:
+            entry = getattr(self, "phrases_search_entry", None)
         if entry is not None:
             entry.grab_focus()
 

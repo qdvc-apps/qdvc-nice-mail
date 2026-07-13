@@ -53,7 +53,7 @@ qdvc/
     ui_prefs.py               SHORTCUTS table, dropdown label tables
     gtk3/
         gtk3_emoji_tab.py     emoji TreeView; copy, favourites, labels, reorder
-        gtk3_phrases_tab.py   phrases list + add/edit/delete/reorder
+        gtk3_phrases_tab.py   phrases list (alphabetical + search) + add/edit/delete
         gtk3_signature_tab.py signature preview + copy
 ```
 
@@ -65,7 +65,8 @@ qdvc/
   leave it blank and resolve their glyph from the catalogue. Files written by
   older versions with an `id` or `id,label` header still load (the reader
   tolerates missing `label`/`char` columns).
-- `phrases.csv` — header `id,text`; rows are stored in display order.
+- `phrases.csv` — header `id,text`. Rows are stored in insertion/file order,
+  but the Phrases tab displays them sorted alphabetically by text.
 - `mailsigs/signoff.txt` — free text placed before the m-dash.
 - `mailsigs/disclaimer.txt` — disclaimer body (prefixed `Disclaimer: ` on
   output, only when the toolbar toggle is on).
@@ -86,9 +87,12 @@ id (`naming.custom_emoji_id`) and stores the glyph in `favourite_chars`;
 via `EmojiCatalogue.make_custom` (best-effort name from the component code
 points, and skin tone never applied). Custom favourites also appear in the
 *All Emoji* block (`custom_favourites()`), where the view annotates the name.
-List order in `favourite_emoji.csv` and
-`phrases.csv` is significant and preserved on every write, which is what backs
-the move-up/move-down feature.
+List order in `favourite_emoji.csv` is significant and preserved on every write,
+which is what backs the emoji move-up/move-down feature. Phrases are no longer
+manually reorderable — the tab sorts them alphabetically and filters them by a
+search box — though `Workspace.move_phrase` remains in the pure layer, unused by
+the UI. Both TreeViews (Emoji, Phrases) have resizable columns
+(`Gtk.TreeViewColumn.set_resizable(True)`).
 
 ## Signature assembly
 

@@ -11,7 +11,7 @@ import gi
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import GObject, Gtk, Pango  # noqa: E402
+from gi.repository import GLib, GObject, Gtk, Pango  # noqa: E402
 
 from ..naming import generate_message_ref  # noqa: E402
 from ..note import build_note_eml, default_note_filename  # noqa: E402
@@ -59,16 +59,59 @@ class NoteToSelfTab(Gtk.Box):
         body_scroller.add(self.body_view)
         self.pack_start(body_scroller, True, True, 0)
 
-        # Callout notice above the status bar.
+        # Callout notice above the status bar. GTK3 has no "success" message
+        # type (only info/warning/question/error), so we use INFO and paint it
+        # green via a CSS provider keyed on the theme's @success_color. Also a
+        # 24x24 icon and partly-bold text.
         self.callout = Gtk.InfoBar()
         self.callout.set_message_type(Gtk.MessageType.INFO)
+        self._apply_success_style(self.callout)
+        callout_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        icon = Gtk.Image.new_from_icon_name("emblem-default", Gtk.IconSize.LARGE_TOOLBAR)
+        icon.set_pixel_size(24)
+        callout_box.pack_start(icon, False, False, 0)
         self.callout_label = Gtk.Label(xalign=0.0)
-        self.callout.get_content_area().add(self.callout_label)
+        self.callout_label.set_use_markup(True)
+        callout_box.pack_start(self.callout_label, False, False, 0)
+        self.callout.get_content_area().add(callout_box)
         self.pack_start(self.callout, False, False, 0)
 
         # Apply the shared signature preview font to all three fields.
         self.set_font(self.window.config.get("signature_font", "") or "")
         self._update_callout()
+
+    # ---- styling ---------------------------------------------------------
+    @staticmethod
+    def _apply_success_style(info_bar: Gtk.InfoBar) -> None:
+        """Tint the InfoBar green using the theme's success palette.
+
+        GTK3 InfoBars only style .info/.warning/.question/.error, none of which
+        is guaranteed green. We add a CSS class and a provider that colours it
+        with the stylesheet-exported @success_color, falling back to a fixed
+        green if the theme doesn't define it.
+        """
+        css = b"""
+        infobar.qdvc-success > revealer > box {
+            background-color: @success_color;
+            background-image: none;
+            color: #ffffff;
+        }
+        infobar.qdvc-success {
+            background-color: @success_color;
+        }
+        """
+        provider = Gtk.CssProvider()
+        try:
+            provider.load_from_data(css)
+        except Exception:
+            provider.load_from_data(
+                b"infobar.qdvc-success, "
+                b"infobar.qdvc-success > revealer > box "
+                b"{ background-color: #2e7d32; color: #ffffff; }"
+            )
+        ctx = info_bar.get_style_context()
+        ctx.add_class("qdvc-success")
+        ctx.add_provider(provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     # ---- font ------------------------------------------------------------
     def set_font(self, font_desc: str) -> None:
@@ -84,8 +127,9 @@ class NoteToSelfTab(Gtk.Box):
         self.emit("status", f"New message ref: {self.message_ref}")
 
     def _update_callout(self) -> None:
-        self.callout_label.set_text(
-            f"This message will be assigned message ref. {self.message_ref}"
+        ref = GLib.markup_escape_text(self.message_ref)
+        self.callout_label.set_markup(
+            f"This note to self will be assigned <b>Message ref. {ref}</b>"
         )
 
     # ---- persistence -----------------------------------------------------
@@ -134,4 +178,9 @@ class NoteToSelfTab(Gtk.Box):
         except OSError as exc:
             self.emit("status", f"Could not save EML: {exc}")
             return
+        # Clear the composed note and start a fresh message ref for the next one.
+        self.subject_entry.set_text("")
+        self.body_buffer.set_text("")
+        self.message_ref = generate_message_ref()
+        self._update_callout()
         self.emit("status", f"Saved note to {path}")

@@ -120,9 +120,17 @@ Ref Only mode). `default_note_filename()` yields
 `yyyy-mm-dd-message-ref-<ref>.eml`. The From/To address persists via config key
 `note_email`; the tab's message ref is independent of the Signature tab's.
 `gtk3_note_tab.py` holds the three fields (address, subject, body) — all sharing
-the Signature preview font via `set_font()` — and a `Gtk.InfoBar` callout for
-the ref; Send runs `build_note_eml()` and offers a Save dialog. The Send button
-uses the `document-save` icon per the feature request.
+the Signature preview font via `set_font()` — and a `Gtk.InfoBar` callout
+containing a 24px `emblem-default` icon and a markup label ("This note to self
+will be assigned <b>Message ref. …</b>"). GTK 3 has no "success" message type
+(only info/warning/question/error), so the bar uses `MessageType.INFO` and is
+painted green by `_apply_success_style`, which adds a CSS class plus a
+`Gtk.CssProvider` keyed on the theme's exported `@success_color` (with a fixed
+green fallback). Send runs `build_note_eml()` and offers a Save dialog; on a
+successful save it clears the subject and body and generates a fresh message ref
+(as if New Ref were pressed). New Ref and View → Refresh both call
+`refresh_message_ref()`. The Send button uses the `document-save` icon per the
+feature request.
 
 ## UI layout (the tab-bar-above-toolbar deviation)
 
@@ -176,6 +184,11 @@ Action sensitivity is centralised in `_update_actions_sensitivity`.
 ## Testing
 
 `tests_model.py` exercises the pure layer against a temp workspace (including
-favourite labels, reordering, and signature format). `tests_import_smoke.py`
-installs a permissive fake `gi` and imports every view module. Pre-ship:
-`py_compile` all modules, then both test scripts.
+favourite labels, signature format, and note-to-self EML output).
+`tests_import_smoke.py` installs a permissive fake `gi` and imports every view
+module; because that stub returns a truthy value for *any* attribute (so a
+nonexistent enum member like `Gtk.MessageType.SUCCESS` would import fine and
+only fail at runtime), it also statically validates every `Gtk.<Enum>.<MEMBER>`
+access against a curated map of real GTK 3 members. When using a new GTK enum,
+add its valid members to that map. Pre-ship: `py_compile` all modules, then both
+test scripts.

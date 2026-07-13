@@ -532,7 +532,7 @@ class MainWindow(Gtk.ApplicationWindow):
             self.signature_tab.copy_signature()
 
     def refresh_current_tab(self) -> None:
-        """View -> Refresh: reload from disk; Signature also gets a new ref."""
+        """View -> Refresh: reload from disk; Signature/Note also get a new ref."""
         if self.workspace is not None:
             self.workspace.scan()
         idx = self._current_tab_index()
@@ -543,6 +543,8 @@ class MainWindow(Gtk.ApplicationWindow):
         elif idx == TAB_SIGNATURE:
             # Reload from disk and generate a fresh message ref.
             self.signature_tab.refresh_message_ref()
+        elif idx == TAB_NOTE:
+            self.note_tab.refresh_message_ref()
 
     # ---- workspace -------------------------------------------------------
     def choose_workspace(self) -> None:

@@ -41,13 +41,14 @@ top).
    Ref Only, and profile choices persist between sessions.
 4. **Note to Self** — write a quick note and save it as an `.eml` you can send
    to yourself. Fill in a **From / To** address (remembered between sessions), a
-   **subject**, and a plaintext **body**; a callout shows the message ref that
-   will be attached (**New Ref** regenerates it). **Send** (the disk icon) writes
-   a self-addressed `.eml` — From and To are the same address, dated now — whose
-   body is your text followed by the m-dash and message-ref trailer. You choose
-   where to save it; the default filename is
-   `yyyy-mm-dd-message-ref-<ref>.eml`. Its message ref is independent of the
-   Signature tab's.
+   **subject**, and a plaintext **body**; a green callout shows the message ref
+   that will be attached (**New Ref**, or **View → Refresh**, regenerates it).
+   **Send** (the disk icon) writes a self-addressed `.eml` — From and To are the
+   same address, dated now — whose body is your text followed by the m-dash and
+   message-ref trailer. You choose where to save it; the default filename is
+   `yyyy-mm-dd-message-ref-<ref>.eml`. After saving, the subject and body are
+   cleared and a fresh message ref is generated for the next note. Its message
+   ref is independent of the Signature tab's.
 
 **Edit → Copy** (`Ctrl+C`) and **View → Refresh** (`Ctrl+R`) adapt to the active
 tab: Copy copies the selected emoji/phrase, or the whole signature; Refresh

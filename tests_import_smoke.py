@@ -64,6 +64,59 @@ def _install_fake_gi():
     sys.modules["gi.repository"] = repo
 
 
+def _check_gtk_enum_members() -> list[str]:
+    """Static check: every ``Gtk.<Enum>.<MEMBER>`` used in the views must be a
+    real GTK 3 member.
+
+    The fake ``gi`` stub returns a truthy value for *any* attribute, so a typo
+    or nonexistent enum member (e.g. ``Gtk.MessageType.SUCCESS``, which does not
+    exist in GTK 3) imports cleanly and only blows up at runtime. This pass
+    parses the source for such accesses and validates them against a curated map
+    of real GTK 3 enum members, closing that blind spot.
+    """
+    import glob
+    import os
+    import re
+
+    # Curated: the GTK 3 enums the codebase uses, with their valid members.
+    valid = {
+        "AccelFlags": {"VISIBLE", "LOCKED", "MASK"},
+        "ButtonsType": {"NONE", "OK", "CLOSE", "CANCEL", "YES_NO", "OK_CANCEL"},
+        "FileChooserAction": {"OPEN", "SAVE", "SELECT_FOLDER", "CREATE_FOLDER"},
+        "IconSize": {
+            "INVALID", "MENU", "SMALL_TOOLBAR", "LARGE_TOOLBAR",
+            "BUTTON", "DND", "DIALOG",
+        },
+        "MessageType": {"INFO", "WARNING", "QUESTION", "ERROR", "OTHER"},
+        "Orientation": {"HORIZONTAL", "VERTICAL"},
+        "PolicyType": {"ALWAYS", "AUTOMATIC", "NEVER", "EXTERNAL"},
+        "ResponseType": {
+            "NONE", "REJECT", "ACCEPT", "DELETE_EVENT", "OK", "CANCEL",
+            "CLOSE", "YES", "NO", "APPLY", "HELP",
+        },
+        "SelectionMode": {"NONE", "SINGLE", "BROWSE", "MULTIPLE"},
+        "ShadowType": {"NONE", "IN", "OUT", "ETCHED_IN", "ETCHED_OUT"},
+        "ToolbarStyle": {"ICONS", "TEXT", "BOTH", "BOTH_HORIZ"},
+        "WindowPosition": {
+            "NONE", "CENTER", "MOUSE", "CENTER_ALWAYS", "CENTER_ON_PARENT",
+        },
+        "WrapMode": {"NONE", "CHAR", "WORD", "WORD_CHAR"},
+    }
+    pattern = re.compile(r"Gtk\.([A-Z][A-Za-z]+)\.([A-Z][A-Z_]+)\b")
+    here = os.path.dirname(os.path.abspath(__file__))
+    problems: list[str] = []
+    for path in glob.glob(os.path.join(here, "qdvc", "gtk3", "*.py")):
+        with open(path, encoding="utf-8") as fh:
+            src = fh.read()
+        for enum, member in pattern.findall(src):
+            if enum in valid and member not in valid[enum]:
+                problems.append(
+                    f"{os.path.basename(path)}: Gtk.{enum}.{member} is not a "
+                    f"valid GTK 3 member"
+                )
+    return problems
+
+
 def main() -> int:
     _install_fake_gi()
     modules = [
@@ -93,11 +146,18 @@ def main() -> int:
         except Exception as exc:  # noqa: BLE001
             failures.append((name, repr(exc)))
 
-    if failures:
+    enum_problems = _check_gtk_enum_members()
+
+    if failures or enum_problems:
         for name, err in failures:
             print(f"FAIL {name}: {err}")
+        for problem in enum_problems:
+            print(f"FAIL {problem}")
         return 1
-    print(f"import smoke test OK ({len(modules)} modules)")
+    print(
+        f"import smoke test OK ({len(modules)} modules; "
+        f"enum members validated)"
+    )
     return 0
 
 

@@ -97,10 +97,11 @@ blank line, except that an **extra** blank line precedes the m-dash (two blank
 lines between the signoff and the m-dash). The message ref uses the reduced,
 unambiguous alphabet in `qdvc/naming.py`. In `ref_only` mode the function
 returns just the m-dash, a blank line, and the `Message ref.` line — nothing
-else. The Ref Only and Disclaimer toggles and the Profile choice persist via
-config keys `ref_only`, `include_disclaimer`, and `profile`; the signature
-preview font is config key `signature_font` (empty = built-in monospace), and
-the emoji skin tone is config key `skin_tone` (both set in Preferences).
+else. The Ref Only and Disclaimer toggles (both on the Signature toolbar) and
+the Profile choice persist via config keys `ref_only`, `include_disclaimer`,
+and `profile`; the signature preview font is config key `signature_font`
+(empty = built-in monospace), and the emoji skin tone is config key
+`skin_tone` (both set in Preferences).
 
 ## UI layout (the tab-bar-above-toolbar deviation)
 
@@ -110,15 +111,18 @@ content `Gtk.Stack`, and a statusbar. Switching notebook pages swaps both the
 toolbar stack and the content stack (`_on_switch_page`), so each tab shows its
 own toolbar between the tab bar and the content. The emoji "toolbar" is a
 vertical `Gtk.Box` of two `Gtk.Toolbar` rows (controls, then the search box on
-its own row); the stack accepts any widget, not just a `Gtk.Toolbar`.
+its own row); the stack accepts any widget, not just a `Gtk.Toolbar`. The
+toolbar stack sets `vhomogeneous(False)` so the single-row Phrases/Signature
+toolbars keep their natural height instead of matching the two-row emoji one.
 
-Three menu commands are tab-adaptive or stateful: `copy_current_tab`
-(Edit → Copy, Ctrl+C) and `refresh_current_tab` (View → Refresh, Ctrl+R)
-dispatch on the active page (Refresh rescans the workspace and, on the
-Signature tab, also generates a new message ref); the Signature menu's
-Ref Only check item and the Signature toolbar's Ref Only toggle share the
-`_on_ref_only_toggled` handler and are kept in sync (without re-entrancy) by
-`_apply_ref_only_state`, which also disables the Disclaimer toggle while on.
+Two menu commands are tab-adaptive: `copy_current_tab` (Edit → Copy, Ctrl+C)
+and `refresh_current_tab` (View → Refresh, Ctrl+R) dispatch on the active page
+(Refresh rescans the workspace and, on the Signature tab, also generates a new
+message ref). The Signature toolbar's Ref Only toggle uses
+`_on_ref_only_toggled`; `_apply_ref_only_state` re-renders and disables the
+Disclaimer toggle while Ref Only is on. Window-level accelerators (in
+`_wire_accelerators`) add F5 (new message ref) and Ctrl+F (focus the emoji
+search box when the emoji tab is active).
 
 Menu items are built by `_menu_item(label, icon, accel)`: it uses
 `Gtk.ImageMenuItem.new_with_mnemonic` when an icon resolves (so GTK handles

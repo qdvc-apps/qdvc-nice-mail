@@ -70,6 +70,9 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # --- per-tab toolbar (swapped by a stack) -------------------------
         self.toolbar_stack = Gtk.Stack()
+        # Let each toolbar use its natural height; otherwise the stack sizes to
+        # its tallest child (the two-row emoji toolbar) and pads the others.
+        self.toolbar_stack.set_vhomogeneous(False)
         root.pack_start(self.toolbar_stack, False, False, 0)
         root.pack_start(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), False, False, 0)
 
@@ -213,18 +216,6 @@ class MainWindow(Gtk.ApplicationWindow):
         view_menu.append(mi_refresh)
         menubar.append(view_item)
 
-        # Signature  (Alt+S) — Ref Only mode toggle.
-        sig_menu = Gtk.Menu()
-        sig_item = Gtk.MenuItem.new_with_mnemonic("_Signature")
-        sig_item.set_submenu(sig_menu)
-        self.mi_ref_only = Gtk.CheckMenuItem.new_with_mnemonic("_Ref Only Mode")
-        self.mi_ref_only.set_active(bool(self.config.get("ref_only", False)))
-        self._ref_only_handler = self.mi_ref_only.connect(
-            "toggled", self._on_ref_only_toggled
-        )
-        sig_menu.append(self.mi_ref_only)
-        menubar.append(sig_item)
-
         # Help  (Alt+H)
         help_menu = Gtk.Menu()
         help_item = Gtk.MenuItem.new_with_mnemonic("_Help")
@@ -270,7 +261,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # Add a custom (pasted) emoji to favourites.
         custom_btn = Gtk.ToolButton(label="Add Custom")
-        custom_btn.set_icon_name("list-add")
+        custom_btn.set_icon_name("bookmark-new")
         custom_btn.set_is_important(True)
         custom_btn.set_tooltip_text(
             "Add a pasted emoji to favourites (e.g. one not in the list)"
@@ -329,19 +320,19 @@ class MainWindow(Gtk.ApplicationWindow):
         self._apply_toolbar_style(tb)
 
         add_btn = Gtk.ToolButton(label="Add")
-        add_btn.set_icon_name("list-add")
+        add_btn.set_icon_name("mail_new")
         add_btn.set_is_important(True)
         add_btn.connect("clicked", lambda *_: self.phrases_tab.add_phrase())
         tb.insert(add_btn, -1)
 
         edit_btn = Gtk.ToolButton(label="Edit")
-        edit_btn.set_icon_name("document-edit")
+        edit_btn.set_icon_name("edit-select-all")
         edit_btn.set_is_important(True)
         edit_btn.connect("clicked", lambda *_: self.phrases_tab.edit_phrase())
         tb.insert(edit_btn, -1)
 
         del_btn = Gtk.ToolButton(label="Delete")
-        del_btn.set_icon_name("list-remove")
+        del_btn.set_icon_name("edit-delete")
         del_btn.set_is_important(True)
         del_btn.connect("clicked", lambda *_: self.phrases_tab.delete_phrase())
         tb.insert(del_btn, -1)
@@ -390,7 +381,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # Disclaimer toggle.
         self.disclaimer_toggle = Gtk.ToggleToolButton(label="Disclaimer")
-        self.disclaimer_toggle.set_icon_name("dialog-information")
+        self.disclaimer_toggle.set_icon_name("screensaver")
         self.disclaimer_toggle.set_is_important(True)
         self.disclaimer_toggle.set_active(bool(self.config.get("include_disclaimer", True)))
         self.disclaimer_toggle.connect("toggled", self._on_disclaimer_toggled)
@@ -398,7 +389,7 @@ class MainWindow(Gtk.ApplicationWindow):
 
         # Ref Only mode toggle (mirrors the Signature menu check item).
         self.ref_only_toggle = Gtk.ToggleToolButton(label="Ref Only")
-        self.ref_only_toggle.set_icon_name("format-justify-left")
+        self.ref_only_toggle.set_icon_name("mail-send")
         self.ref_only_toggle.set_is_important(True)
         self.ref_only_toggle.set_active(bool(self.config.get("ref_only", False)))
         self.ref_only_toggle.connect("toggled", self._on_ref_only_toggled)
@@ -435,25 +426,19 @@ class MainWindow(Gtk.ApplicationWindow):
         self.signature_tab.set_include_disclaimer(btn.get_active())
 
     def _on_ref_only_toggled(self, widget) -> None:  # noqa: ANN001
-        """Handler shared by the toolbar toggle and the menu check item."""
+        """Handler for the Ref Only toolbar toggle."""
         active = widget.get_active()
         self.config.set("ref_only", active)
         self._apply_ref_only_state(active)
 
     def _apply_ref_only_state(self, active: bool) -> None:
-        """Sync both Ref Only controls, disable disclaimer when on, re-render."""
-        # Keep the toolbar toggle and menu check item in agreement without
-        # re-triggering their handlers.
+        """Sync the Ref Only toggle, disable disclaimer when on, re-render."""
+        # Keep the toolbar toggle in agreement without re-triggering its handler.
         toggle = getattr(self, "ref_only_toggle", None)
         if toggle is not None and toggle.get_active() != active:
             toggle.handler_block_by_func(self._on_ref_only_toggled)
             toggle.set_active(active)
             toggle.handler_unblock_by_func(self._on_ref_only_toggled)
-        menu_item = getattr(self, "mi_ref_only", None)
-        if menu_item is not None and menu_item.get_active() != active:
-            menu_item.handler_block(self._ref_only_handler)
-            menu_item.set_active(active)
-            menu_item.handler_unblock(self._ref_only_handler)
         # Disclaimer is meaningless in Ref Only mode.
         disc = getattr(self, "disclaimer_toggle", None)
         if disc is not None:
@@ -467,6 +452,18 @@ class MainWindow(Gtk.ApplicationWindow):
             Gdk.KEY_F5, 0, Gtk.AccelFlags.VISIBLE,
             lambda *a: (self.signature_tab.refresh_message_ref() or True),
         )
+        # Ctrl+F -> focus the emoji search box (when the emoji tab is active).
+        self.accel_group.connect(
+            Gdk.KEY_f, Gdk.ModifierType.CONTROL_MASK, Gtk.AccelFlags.VISIBLE,
+            lambda *a: (self._focus_emoji_search() or True),
+        )
+
+    def _focus_emoji_search(self) -> None:
+        if self._current_tab_index() != TAB_EMOJI:
+            return
+        entry = getattr(self, "search_entry", None)
+        if entry is not None:
+            entry.grab_focus()
 
     # ---- tab switching ---------------------------------------------------
     def _show_tab(self, index: int) -> None:

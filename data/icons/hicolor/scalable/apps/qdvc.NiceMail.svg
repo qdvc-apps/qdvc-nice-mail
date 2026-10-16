@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="pocket" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#62a0ea"/><stop offset="1" stop-color="#3584e4"/>
+    </linearGradient>
+    <linearGradient id="flap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3584e4"/><stop offset="1" stop-color="#1c71d8"/>
+    </linearGradient>
+    <linearGradient id="letter" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#f6f5f4"/>
+    </linearGradient>
+    <linearGradient id="face" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f9f06b"/><stop offset="1" stop-color="#f6d32d"/>
+    </linearGradient>
+  </defs>
+  <!-- the inside of the envelope, and its flap folded open behind the letter -->
+  <rect x="12" y="46" width="104" height="58" rx="10" fill="#1a5fb4"/>
+  <path d="M12 56 Q12 50 18 46 L56 21 Q64 16 72 21 L110 46 Q116 50 116 56 Z" fill="url(#flap)"/>
+  <!-- the letter: three lines of text and a signature -->
+  <rect x="27" y="16" width="74" height="80" rx="5" fill="url(#letter)"/>
+  <path d="M37 29 H91 M37 38 H86 M37 47 H72" fill="none" stroke="#c0bfbc"
+        stroke-width="4" stroke-linecap="round"/>
+  <path d="M38 66 C41 60 45 55 47 57 C49 60 43 67 45 66 C48 64 51 58 54 59 C56 60 53 65 56 65
+           C59 65 61 60 64 60 C66 60 65 64 68 64 C72 64 76 59 82 58"
+        fill="none" stroke="#1c71d8" stroke-width="3" stroke-linecap="round"
+        stroke-linejoin="round"/>
+  <!-- the front pocket, with a darker bottom edge for thickness -->
+  <path d="M12 64 L57 91 Q64 95 71 91 L116 64 L116 100 Q116 110 106 110 L22 110 Q12 110 12 100 Z"
+        fill="#1a5fb4"/>
+  <path d="M12 60 L57 87 Q64 91 71 87 L116 60 L116 96 Q116 106 106 106 L22 106 Q12 106 12 96 Z"
+        fill="url(#pocket)"/>
+  <!-- the smiley sticker -->
+  <circle cx="96" cy="97" r="22" fill="#e5a50a"/>
+  <circle cx="96" cy="94" r="22" fill="url(#face)"/>
+  <ellipse cx="88.5" cy="88" rx="3" ry="4.2" fill="#63452c"/>
+  <ellipse cx="103.5" cy="88" rx="3" ry="4.2" fill="#63452c"/>
+  <path d="M85 98 Q96 109 107 98" fill="none" stroke="#63452c" stroke-width="4"
+        stroke-linecap="round"/>
+</svg>

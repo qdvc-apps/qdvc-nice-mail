@@ -7,7 +7,8 @@ from qdvc.emoji import DEFAULT_FAVOURITE_CHAR, EmojiCatalogue, accepts_skin_tone
 from qdvc.mailsig import assemble_signature
 from qdvc.naming import MSGREF_ALPHABET, MSGREF_LENGTH, emoji_id, generate_message_ref
 from qdvc.note import build_note_eml, default_note_filename, note_body
-from qdvc.workspace import Workspace
+from qdvc import ui_prefs
+from qdvc.workspace import Workspace, looks_like_workspace
 
 
 class NamingTests(unittest.TestCase):
@@ -180,6 +181,118 @@ class NoteEmailTests(unittest.TestCase):
             default_note_filename("ABC1234567", when=when),
             "2026-01-05-message-ref-ABC1234567.eml",
         )
+
+
+class SharedUiRulesTests(unittest.TestCase):
+    """The toolkit-independent rules both front-ends call (ui_prefs)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.catalogue = EmojiCatalogue()
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+        self.ws = Workspace(self.dir, catalogue=self.catalogue)
+        self.ws.ensure_scaffold()
+        self.ws.scan()
+
+    def test_emoji_blocks(self):
+        favs = ui_prefs.emoji_block_items(self.ws, "favourites")
+        self.assertEqual([e.char for e in favs], [DEFAULT_FAVOURITE_CHAR])
+        custom = self.ws.add_custom_favourite("❤️‍\U0001fa79")
+        everything = ui_prefs.emoji_block_items(self.ws, "all")
+        # Custom favourites come first in All Emoji, then the catalogue.
+        self.assertEqual(everything[0].id, custom)
+        self.assertEqual(len(everything), len(self.catalogue.all()) + 1)
+
+    def test_emoji_search_matches_name_id_and_label(self):
+        wave = next(e for e in self.catalogue.all() if e.char == "\U0001F44B")
+        self.ws.add_favourite(wave.id)
+        self.ws.set_favourite_label(wave.id, "Hello there")
+        self.assertTrue(ui_prefs.emoji_matches(self.ws, wave, "WAVING"))
+        self.assertTrue(ui_prefs.emoji_matches(self.ws, wave, "waving_hand"))
+        self.assertTrue(ui_prefs.emoji_matches(self.ws, wave, "hello"))
+        self.assertTrue(ui_prefs.emoji_matches(self.ws, wave, "  "))
+        self.assertFalse(ui_prefs.emoji_matches(self.ws, wave, "pizza"))
+        self.assertEqual([e.id for e in ui_prefs.emoji_listing(self.ws, "favourites", "hello")],
+                         [wave.id])
+
+    def test_custom_emoji_display_name(self):
+        custom = self.ws.resolve_emoji(self.ws.add_custom_favourite("\U0001F600‍"))
+        self.assertIn(ui_prefs.CUSTOM_EMOJI_NOTE, ui_prefs.emoji_display_name(custom))
+        smile = self.catalogue.all()[0]
+        self.assertEqual(ui_prefs.emoji_display_name(smile), smile.name)
+
+    def test_phrase_listing_is_alphabetical_and_filtered(self):
+        self.ws.add_phrase("apples are nice")
+        texts = [p.text for p in ui_prefs.phrase_listing(self.ws)]
+        self.assertEqual(texts, sorted(texts, key=str.lower))
+        self.assertEqual([p.text for p in ui_prefs.phrase_listing(self.ws, "APPLE")],
+                         ["apples are nice"])
+
+    def test_shortcuts_table(self):
+        for toolkit in ("gtk3", "gtk4"):
+            accels = [a for s in ui_prefs.shortcuts_for(toolkit) for a in s.accels]
+            self.assertEqual(len(accels), len(set(accels)), f"duplicate accel in {toolkit}")
+        self.assertTrue(all(s.section in ui_prefs.SHORTCUT_SECTIONS for s in ui_prefs.SHORTCUTS))
+        gtk3_titles = [t for t, _a in __import__(
+            "qdvc.gtk3.gtk3_shortcuts", fromlist=["x"]).shortcut_rows()]
+        self.assertNotIn("Keyboard shortcuts", gtk3_titles)  # GTK 4 only
+        # Ctrl+C must not be an application accelerator in GTK 4 (it would
+        # pre-empt copying text in a search box); it is a bubble shortcut.
+        self.assertNotIn("win.copy", ui_prefs.accelerators("gtk4"))
+        self.assertEqual(ui_prefs.accelerators("gtk4", bubble=True), {"win.copy": ["<Primary>c"]})
+        pages = {s.action.split("::")[1] for s in ui_prefs.SHORTCUTS
+                 if s.action and s.action.startswith("win.show-page::")}
+        self.assertEqual(pages, set(ui_prefs.PAGE_IDS))
+
+    def test_font_css(self):
+        self.assertEqual(ui_prefs.font_css(".x", None, None), "")
+        css = ui_prefs.font_css(".x text", 'My "Odd" Font, Mono', 10.5, 700, True)
+        self.assertIn('font-family: "My \\"Odd\\" Font", "Mono";', css)
+        self.assertIn("font-size: 10.5pt;", css)
+        self.assertIn("font-weight: 700;", css)
+        self.assertIn("font-style: italic;", css)
+        self.assertNotIn("font-weight", ui_prefs.font_css(".x", "Sans", 11, 400))
+
+    def test_skin_tone_sample(self):
+        self.assertEqual(ui_prefs.skin_tone_sample("none"), "\U0001F44B")
+        self.assertEqual(ui_prefs.skin_tone_sample("dark"), "\U0001F44B\U0001F3FF")
+
+    def test_looks_like_workspace(self):
+        empty = tempfile.mkdtemp()
+        self.assertFalse(looks_like_workspace(empty))
+        self.assertTrue(looks_like_workspace(self.dir))
+        os.makedirs(os.path.join(empty, "mailsigs"))
+        self.assertTrue(looks_like_workspace(empty))
+
+
+class DispatcherTests(unittest.TestCase):
+    """qdvc_nicemail.py chooses a backend before importing any GTK."""
+
+    def setUp(self):
+        self.old = os.environ.get("XDG_CONFIG_HOME")
+        os.environ["XDG_CONFIG_HOME"] = tempfile.mkdtemp()
+        import qdvc_nicemail
+        self.d = qdvc_nicemail
+
+    def tearDown(self):
+        if self.old is None:
+            os.environ.pop("XDG_CONFIG_HOME", None)
+        else:
+            os.environ["XDG_CONFIG_HOME"] = self.old
+
+    def test_flag_wins_and_is_consumed(self):
+        self.assertEqual(self.d._select_backend(["x", "/ws", "--gtk4"]), ("gtk4", True, ["/ws"]))
+        self.assertEqual(self.d._select_backend(["x", "--gtk3"]), ("gtk3", True, []))
+
+    def test_config_then_default(self):
+        self.assertEqual(self.d._select_backend(["x"]), ("gtk3", False, []))
+        from qdvc.config import Config
+        Config().set("ui_backend", "GTK4")
+        self.assertEqual(self.d._select_backend(["x"]), ("gtk4", False, []))
+        Config().set("ui_backend", "qt")  # unrecognised -> gtk3
+        self.assertEqual(self.d._select_backend(["x"]), ("gtk3", False, []))
 
 
 if __name__ == "__main__":

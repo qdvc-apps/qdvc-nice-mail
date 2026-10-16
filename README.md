@@ -1,68 +1,81 @@
 # QDVC Nice Mail
 
+<img src="data/icons/hicolor/scalable/apps/qdvc.NiceMail.svg" alt="" width="96" align="right">
+
 Write emails faster by keeping your most-used building blocks one click away:
 a searchable **emoji** picker with favourites and skin tones, a library of
-reusable **phrases**, and an assembled plaintext mail **signature**.
+reusable **phrases**, an assembled plaintext mail **signature**, and a quick
+**note to self** saved as an `.eml`.
 
-Built as a Python 3 + GTK 3 desktop app following the
-[QDVC Python GTK app specification](https://github.com/qdvc-apps/qdvc-python-gtk-app-specification).
-A GTK 4 / libadwaita front-end is **not** provided at this stage; the backend
-dispatcher accepts `--gtk4` but falls back to GTK 3 with a note.
+Built in Python following the
+[QDVC Python GTK app specification](https://github.com/qdvc-apps/qdvc-python-gtk-app-specification),
+with two front-ends over the same files:
+
+- **GTK 3** — the classic look (menubar, toolbars, statusbar), at home on MATE.
+  The default.
+- **GTK 4 / libadwaita** — a GNOME app following the GNOME HIG: a view
+  switcher in the header bar, header-bar buttons, toasts, and a layout that
+  adapts down to phone width; light and dark styles.
+
+Switch between them in **Preferences** (it takes effect the next time the app
+starts), or start one explicitly with `--gtk3` / `--gtk4`.
 
 ## What it does
 
-The window has three tabs. The **tab bar sits above the toolbar**, because
-each tab carries its own toolbar of relevant actions (the menubar stays on
-top).
+The window has four pages: tabs under the menubar in GTK 3 (the **tab bar
+sits above the toolbar**, because each tab carries its own toolbar of relevant
+actions), a view switcher in GTK 4's header bar.
 
 1. **Emoji** — a table of emoji, one per row (symbol, name, and your optional
-   user label). Select a row and press **Ctrl+C** to copy the emoji. The
-   toolbar's first row offers a **block** dropdown (*Favourites* by default, or
-   *All Emoji* — the full Unicode set), an **Add Custom** button, **Move
-   Up/Down** buttons to reorder favourites, and a **Copy** button; a second row
-   holds the **search** box, which matches the emoji name, description, or your
-   user label (**Ctrl+F** jumps to it). The **skin tone** is set in *Edit →
-   Preferences* and persists between sessions. **Right-click** any emoji to add
-   it to (or remove it from)
-   your favourites, set a **user label** on a favourite, or move it up/down. If
-   an emoji isn't in the list (many multi-part emoji such as ❤️‍🩹 have no single
-   Unicode name and so aren't generated), use **Add Custom** to paste it in;
-   it's saved to your favourites and also shown in *All Emoji*, noted as a
-   custom emoji.
-2. **Phrases** — your common phrases, listed alphabetically, with toolbar
-   buttons to **add**, **edit**, and **delete**, plus a **search** box on a
-   second row (**Ctrl+F** jumps to it). Select one and Ctrl+C (or the Copy
-   button) to copy it.
-3. **Signature** — assembles a plaintext signature. Pick a **profile** in the
-   toolbar, toggle the **disclaimer** on/off, and hit **New Ref** (or **F5**)
-   for a fresh message reference. Copy the result with the Copy button. A
+   user label). Select a row and press **Ctrl+C** (or Enter, or double-click)
+   to copy the emoji. Choose the **block** — *Favourites* by default, or
+   *All Emoji* (the full Unicode set) — and **search** by name, description or
+   your user label (**Ctrl+F** jumps to the search box; in GTK 4 you can just
+   start typing, and Enter copies the selected match). **Add to (or remove
+   from) your favourites** with a right-click, or GTK 4's star button; give a
+   favourite a **user label**; **move** favourites up and down to order them.
+   The **skin tone** is set in Preferences and persists between sessions. If
+   an emoji isn't in the list (many multi-part emoji such as ❤️‍🩹 have no
+   single Unicode name and so aren't generated), use **Add Custom** to paste
+   it in; it's saved to your favourites and also shown in *All Emoji*, noted
+   as a custom emoji.
+2. **Phrases** — your common phrases, listed alphabetically, with a search
+   box (**Ctrl+F**), and **add**, **edit** and **delete**. Select one and
+   Ctrl+C (or the Copy button, Enter or a double-click) to copy it.
+3. **Signature** — assembles a plaintext signature. Pick a **profile**, toggle
+   the **disclaimer** on/off, and hit **New Ref** (or **F5**) for a fresh
+   message reference. Copy the result with the Copy button or Ctrl+C. A
    **Ref Only** toggle strips everything but the m-dash and the message ref
    line; while it's on, the disclaimer toggle is disabled. The disclaimer,
    Ref Only, and profile choices persist between sessions.
 4. **Note to Self** — write a quick note and save it as an `.eml` you can send
    to yourself. Fill in a **From / To** address (remembered between sessions), a
    **subject**, and a plaintext **body**; a green callout shows the message ref
-   that will be attached (**New Ref**, or **View → Refresh**, regenerates it).
+   that will be attached (**New Ref**, F5, or Refresh regenerates it).
    **Send** (the disk icon) writes a self-addressed `.eml` — From and To are the
    same address, dated now — whose body is your text followed by the m-dash and
    message-ref trailer. You choose where to save it; the default filename is
    `yyyy-mm-dd-message-ref-<ref>.eml`. After saving, the subject and body are
    cleared and a fresh message ref is generated for the next note. Its message
-   ref is independent of the Signature tab's.
+   ref is independent of the Signature page's. This page works without a
+   workspace.
 
-**Edit → Copy** (`Ctrl+C`) and **View → Refresh** (`Ctrl+R`) adapt to the active
-tab: Copy copies the selected emoji/phrase, or the whole signature; Refresh
-reloads the table from disk, and on the Signature tab also generates a new
-message ref.
+**Copy** (`Ctrl+C`) and **Refresh** (`Ctrl+R`) adapt to the active page: Copy
+copies the selected emoji/phrase, or the whole signature; Refresh reloads the
+workspace from disk, and on the Signature and Note pages also generates a new
+message ref. `Alt+1` … `Alt+4` switch pages.
 
-Table columns (in the Emoji and Phrases tabs) can be resized by dragging their
-header edges.
+In GTK 3, every menu is reachable by mnemonic — **Alt+F** File, **Alt+E**
+Edit, **Alt+V** View, **Alt+H** Help — and menu items show their shortcuts
+inline. In GTK 4, everything else is in the main menu (☰), and **Ctrl+?**
+lists every shortcut.
 
 ## The workspace folder
 
-All data lives in a plain-text **workspace folder** you open from
-**File → Open Workspace…** (`Ctrl+O`). Missing files are created for you on
-first open. Layout:
+All data lives in a plain-text **workspace folder** you open with
+**Open Workspace…** (`Ctrl+O`). Missing files are created for you the first
+time (the app asks first if the folder doesn't look like a workspace yet).
+Layout:
 
 ```
 <workspace>/
@@ -110,52 +123,95 @@ is drawn from an unambiguous alphabet
 
 ## Requirements
 
-- Python **3.10+**
-- **PyGObject** + **GTK 3** (`python3-gi`, `gir1.2-gtk-3.0`)
-- **PyYAML** (for the preferences file)
-
-On Debian/Ubuntu/MATE:
+- Python **3.10+** with **PyGObject** and **PyYAML**, and either toolkit:
+  - **GTK 4 + libadwaita 1.5 or later** for the GNOME front-end (GNOME 46:
+    Ubuntu 24.04, Debian 13, Fedora 40 or later); or
+  - **GTK 3** for the classic front-end.
 
 ```sh
-sudo apt install python3-gi gir1.2-gtk-3.0 python3-yaml
+sudo apt install python3-gi python3-yaml gir1.2-gtk-4.0 gir1.2-adw-1   # Debian/Ubuntu, GTK 4
+sudo apt install python3-gi python3-yaml gir1.2-gtk-3.0                # Debian/Ubuntu/MATE, GTK 3
+sudo dnf install python3-gobject python3-pyyaml gtk4 libadwaita gtk3   # Fedora, both
 ```
 
-## Run
+There is nothing to compile. If the chosen front-end's toolkit is missing,
+the app starts the other one (with a note on the terminal).
+
+## Install and run
+
+From the repository root:
 
 ```sh
-python3 qdvc_nicemail.py                 # GTK 3 (default)
+scripts/build-app.sh --install   # check, test and install for your user
+```
+
+That installs the app under `~/.local` (no root needed): it appears in
+Activities (GNOME) or the applications menu (MATE) and can be pinned to the
+Dock, and `qdvc-nicemail` runs it from a terminal (if `~/.local/bin` is on your
+`PATH`). After pulling or editing the code, run the same command again: it
+takes a couple of seconds, and if the app is running it is closed and started
+again.
+
+```sh
+scripts/build-app.sh             # check dependencies, run the tests, stage build/
+scripts/build-app.sh --no-tests  # skip the tests
+scripts/build-app.sh --run       # start the staged (or, with --install, installed) app
+scripts/build-app.sh --uninstall # remove it again (your workspaces and settings stay)
+```
+
+What `--install` puts where:
+
+| Path | What |
+| --- | --- |
+| `~/.local/share/qdvc-nicemail/app/` | the program |
+| `~/.local/bin/qdvc-nicemail` | the launcher |
+| `~/.local/share/applications/qdvc.NiceMail.desktop` | the menu entry (named after the application ID, so GNOME on Wayland matches the window to it) |
+| `~/.local/share/icons/hicolor/{scalable,symbolic}/apps/qdvc.NiceMail*.svg` | the icons |
+
+Run straight from a checkout instead:
+
+```sh
+python3 qdvc_nicemail.py                  # the front-end chosen in Preferences (GTK 3 by default)
 python3 qdvc_nicemail.py sample-workspace # open a workspace on launch
-python3 qdvc_nicemail.py --gtk4          # note + falls back to GTK 3
+python3 qdvc_nicemail.py --gtk4           # the GTK 4 / libadwaita front-end
+python3 qdvc_nicemail.py --gtk3           # the GTK 3 front-end
 ```
 
-Preferences (**Edit → Preferences**, `Ctrl+,`) let you switch the toolbar
-style between labels-beside-icons and labels-below-icons, choose the **emoji
-skin tone**, pick a **signature preview font** (also used for the Note to Self
-fields, with a Default button to restore the built-in monospace font), and
-toggle reopening the last workspace.
+## Desktop launcher by hand
 
-Every menu is reachable by mnemonic — **Alt+F** File, **Alt+E** Edit, **Alt+V**
-View, **Alt+H** Help — and menu items show their shortcuts inline.
-
-## Desktop launcher
-
-Copy `qdvc-nicemail.desktop` to `~/.local/share/applications/`, then edit the
-absolute paths in `Exec` and `Path`:
+If you'd rather not use the script, the launcher is
+`data/qdvc.NiceMail.desktop.in` with `@EXEC@` replaced by a command that runs
+the app, installed under its application ID:
 
 ```sh
-cp qdvc-nicemail.desktop ~/.local/share/applications/
-# edit Exec=/Path= to point at this folder
-desktop-file-validate ~/.local/share/applications/qdvc-nicemail.desktop
+sed "s|@EXEC@|python3 $PWD/qdvc_nicemail.py|" data/qdvc.NiceMail.desktop.in \
+    > ~/.local/share/applications/qdvc.NiceMail.desktop
+desktop-file-validate ~/.local/share/applications/qdvc.NiceMail.desktop
 update-desktop-database ~/.local/share/applications
 ```
 
-`StartupWMClass=qdvc-nicemail` matches the app's `GLib.set_prgname` call so the
-panel associates the running window with the launcher.
+(For the icon, also copy `data/icons/hicolor` into `~/.local/share/icons/hicolor`.)
+`StartupWMClass=qdvc-nicemail` matches the program name the app sets
+(`GLib.set_prgname`), so on X11 the panel associates the running window with
+the launcher. If you set up the older `qdvc-nicemail.desktop` launcher by hand
+before, remove it to avoid a second menu entry.
+
+## Preferences
+
+**Edit → Preferences** in GTK 3, main menu › Preferences in GTK 4 (`Ctrl+,`):
+the **emoji skin tone**, the **signature preview font** (also used for the
+Note to Self fields; *Default* restores the built-in monospace font), reopening
+the **last workspace** at launch, and the **interface** (GTK 3 or GTK 4). GTK 3
+also chooses the toolbar style (labels beside or below icons). Settings live in
+`~/.config/qdvc-nicemail/config.yml` and are shared by both front-ends.
 
 ## Development checks (no display needed)
 
 ```sh
-python3 -m py_compile qdvc/*.py qdvc/gtk3/*.py qdvc_nicemail.py
 python3 tests_model.py          # pure-model tests
-python3 tests_import_smoke.py   # fake-gi import of every view module
+python3 tests_import_smoke.py   # fake-gi import of every module, enum + action checks
+python3 tools/make_icon.py      # redraw data/icons/ after editing the icon
 ```
+
+Maintainers: see [docs/MAINTENANCE.md](docs/MAINTENANCE.md) and
+[docs/MAINTENANCE_GTK3_GTK4.md](docs/MAINTENANCE_GTK3_GTK4.md).

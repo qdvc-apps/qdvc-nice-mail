@@ -6,9 +6,9 @@ be rendered consistently, and documents the GTK3 wiring in one place.
 """
 from __future__ import annotations
 
-from ..ui_prefs import SHORTCUTS
+from ..ui_prefs import shortcuts_for
 
 
 def shortcut_rows() -> list[tuple[str, str]]:
     """(label, accelerator) pairs for display in a reference dialog."""
-    return [(label, accel) for (_id, label, accel, _scope) in SHORTCUTS]
+    return [(s.title, s.accels[0]) for s in shortcuts_for("gtk3")]

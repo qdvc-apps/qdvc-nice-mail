@@ -1,0 +1,22 @@
+/* QDVC Nice Mail (GTK 4) — the few styles libadwaita does not provide.
+   Colours come from Adwaita's named colours, so light, dark and high
+   contrast all work. */
+
+/* The Emoji column: larger glyphs. */
+.emoji-glyph { font-size: 1.6em; }
+
+/* Phrases: roomy, wrapped rows. */
+.phrase-row { padding: 9px 6px; }
+
+/* Text views inside a .view frame take the frame's background, so its
+   rounded corners show. */
+textview.signature-preview, textview.signature-preview > text,
+textview.note-body, textview.note-body > text { background: none; }
+
+/* Note to Self: the green "message ref" callout (GTK 3: a green InfoBar). */
+.callout {
+  border-radius: 12px;
+  padding: 8px 8px 8px 14px;
+  background: alpha(@success_bg_color, 0.14);
+}
+.callout .callout-icon { color: @success_color; }

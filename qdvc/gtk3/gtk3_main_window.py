@@ -20,10 +20,10 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 
-from .. import APP_NAME, __version__  # noqa: E402
+from .. import APP_NAME, APP_SUMMARY  # noqa: E402
 from ..platform_utils import reveal_in_file_manager  # noqa: E402
 from ..ui_prefs import EMOJI_BLOCKS, SHORTCUTS  # noqa: E402
-from ..workspace import Workspace  # noqa: E402
+from ..workspace import Workspace, looks_like_workspace  # noqa: E402
 from .gtk3_emoji_tab import EmojiTab  # noqa: E402
 from .gtk3_note_tab import NoteToSelfTab  # noqa: E402
 from .gtk3_phrases_tab import PhrasesTab  # noqa: E402
@@ -42,6 +42,7 @@ class MainWindow(Gtk.ApplicationWindow):
         self.config = app.config
         self.workspace: Workspace | None = None
 
+        self.icon_name = icon_name
         self.set_icon_name(icon_name)
         w, h = self.config.get("window", [900, 600])
         self.set_default_size(int(w), int(h))
@@ -560,8 +561,28 @@ class MainWindow(Gtk.ApplicationWindow):
         resp = dialog.run()
         path = dialog.get_filename()
         dialog.destroy()
-        if resp == Gtk.ResponseType.OK and path:
-            self.open_workspace(path)
+        if resp != Gtk.ResponseType.OK or not path:
+            return
+        if not looks_like_workspace(path) and not self._confirm_new_workspace(path):
+            return
+        self.open_workspace(path)
+
+    def _confirm_new_workspace(self, path: str) -> bool:
+        """Ask before scaffolding workspace files into an unrelated folder."""
+        confirm = Gtk.MessageDialog(
+            transient_for=self, modal=True,
+            message_type=Gtk.MessageType.QUESTION,
+            buttons=Gtk.ButtonsType.OK_CANCEL,
+            text="Start a Nice Mail workspace here?",
+        )
+        confirm.format_secondary_text(
+            f"“{os.path.basename(path) or path}” has no favourite_emoji.csv, "
+            "phrases.csv or mailsigs folder yet. They will be created there with "
+            "sample content, as plain text files you can edit."
+        )
+        resp = confirm.run()
+        confirm.destroy()
+        return resp == Gtk.ResponseType.OK
 
     def open_workspace(self, path: str) -> None:
         if not path or not os.path.isdir(path):
@@ -633,10 +654,12 @@ class MainWindow(Gtk.ApplicationWindow):
         self.statusbar.push(self._status_ctx, msg)
 
     def _show_about(self) -> None:
+        # Spec §8.1: the app icon as the logo; no version or licence until the
+        # app has a real one to state.
         about = Gtk.AboutDialog(transient_for=self, modal=True)
         about.set_program_name(APP_NAME)
-        about.set_version(__version__)
-        about.set_comments("Write emails faster with reusable components.")
+        about.set_comments(APP_SUMMARY)
+        about.set_logo_icon_name(self.icon_name)
         about.run()
         about.destroy()
 

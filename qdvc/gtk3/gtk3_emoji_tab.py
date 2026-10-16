@@ -7,7 +7,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GObject, Gtk  # noqa: E402
 
-from ..ui_prefs import EMOJI_BLOCKS, SKIN_TONE_LABELS  # noqa: E402
+from ..ui_prefs import emoji_display_name, emoji_listing  # noqa: E402
 
 
 class EmojiTab(Gtk.Box):
@@ -89,30 +89,13 @@ class EmojiTab(Gtk.Box):
             self.emit("status", "Open a workspace to see emoji.")
             return
 
-        if self.block == "favourites":
-            emoji = ws.favourite_emoji()
-        else:
-            # All Emoji: the Unicode-derived catalogue, plus any custom (pasted)
-            # favourites, which have no catalogue entry. Show customs first.
-            emoji = ws.custom_favourites() + ws.catalogue.all()
-
-        q = self.query.strip().lower()
-        if q:
-            emoji = [
-                e for e in emoji
-                if q in e.name.lower()
-                or q in e.id
-                or q in ws.favourite_label(e.id).lower()
-            ]
-
+        # Block + search rules are shared with the GTK 4 front-end.
+        emoji = emoji_listing(ws, self.block, self.query)
         for e in emoji:
-            name = e.name
-            if getattr(e, "custom", False):
-                # Note that this row is a user-supplied glyph from favourites.
-                name = f"{e.name}  — custom emoji from your favourites"
-            self.store.append(
-                [e.id, e.display(self.skin_tone), name, ws.favourite_label(e.id)]
-            )
+            self.store.append([
+                e.id, e.display(self.skin_tone), emoji_display_name(e),
+                ws.favourite_label(e.id),
+            ])
 
         self.emit("status", f"{len(emoji)} emoji shown ({self.block}).")
 

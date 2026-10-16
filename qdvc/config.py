@@ -13,9 +13,10 @@ DEFAULTS: dict[str, Any] = {
     "last_workspace": None,
     "recent_workspaces": [],
     "window": [900, 600],
+    "window_maximized": False,  # GTK 4 only
     "reopen_last": True,
-    "toolbar_style": "beside",  # "beside" | "below"
-    "ui_backend": "gtk3",       # only gtk3 implemented at this stage
+    "toolbar_style": "beside",  # "beside" | "below" (GTK 3 only)
+    "ui_backend": "gtk3",       # "gtk3" | "gtk4"; takes effect on the next launch
     "skin_tone": "none",
     "emoji_block": "favourites",
     "profile": None,

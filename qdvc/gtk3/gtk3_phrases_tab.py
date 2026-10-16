@@ -7,6 +7,8 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk, GObject, Gtk  # noqa: E402
 
+from ..ui_prefs import phrase_listing  # noqa: E402
+
 
 class PhrasesTab(Gtk.Box):
     __gsignals__ = {
@@ -51,11 +53,10 @@ class PhrasesTab(Gtk.Box):
         if ws is None:
             self.emit("status", "Open a workspace to see phrases.")
             return
-        # Alphabetical (case-insensitive) by phrase text.
-        phrases = sorted(ws.phrases, key=lambda p: p.text.lower())
-        q = self.query.strip().lower()
-        if q:
-            phrases = [p for p in phrases if q in p.text.lower()]
+        # Alphabetical (case-insensitive) by phrase text, filtered by the
+        # search box (rules shared with the GTK 4 front-end).
+        phrases = phrase_listing(ws, self.query)
+        q = self.query.strip()
         for p in phrases:
             self.store.append([p.id, p.text])
         if q:

@@ -3,7 +3,7 @@
 Layout of a workspace folder:
 
     <workspace>/
-        favourite_emoji.csv        columns: id
+        favourite_emoji.csv        columns: id,label,char
         phrases.csv                columns: id,text
         mailsigs/
             signoff.txt            everything before the m-dash
@@ -27,6 +27,16 @@ def _atomic_write(path: str, text: str) -> None:
     with open(tmp, "w", encoding="utf-8", newline="") as fh:
         fh.write(text)
     os.replace(tmp, path)
+
+
+# Any of these marks a folder as a Nice Mail workspace already.
+WORKSPACE_MARKERS = ("favourite_emoji.csv", "phrases.csv", "mailsigs")
+
+
+def looks_like_workspace(path: str) -> bool:
+    """Whether ``path`` already holds a workspace (so opening it creates no
+    surprise files). Opening any folder scaffolds the missing files."""
+    return any(os.path.exists(os.path.join(path, m)) for m in WORKSPACE_MARKERS)
 
 
 class Workspace:

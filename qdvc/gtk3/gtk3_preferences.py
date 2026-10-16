@@ -6,7 +6,17 @@ import gi
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402
 
-from ..ui_prefs import SKIN_TONE_LABELS  # noqa: E402
+from ..ui_prefs import BACKEND_LABELS, SKIN_TONE_LABELS  # noqa: E402
+
+
+def gtk4_installed() -> bool:
+    """Whether GTK 4 + libadwaita typelibs exist (enumerated, not loaded)."""
+    try:
+        repo = gi.Repository.get_default()
+        return ("4.0" in repo.enumerate_versions("Gtk")
+                and "1" in repo.enumerate_versions("Adw"))
+    except Exception:  # noqa: BLE001
+        return True
 
 
 class PreferencesDialog(Gtk.Dialog):
@@ -57,18 +67,25 @@ class PreferencesDialog(Gtk.Dialog):
         grid.attach(font_box, 1, row, 1, 1)
         row += 1
 
-        # UI backend selector (GTK4 not implemented at this stage).
+        # UI backend selector (spec §3): takes effect on the next launch.
         grid.attach(Gtk.Label(label="UI backend:", xalign=0.0), 0, row, 1, 1)
         self.backend_combo = Gtk.ComboBoxText()
-        self.backend_combo.append("gtk3", "GTK 3 (only backend available)")
-        self.backend_combo.set_active_id("gtk3")
-        self.backend_combo.set_sensitive(False)
+        have_gtk4 = gtk4_installed()
+        for bid, blabel in BACKEND_LABELS:
+            if bid == "gtk4" and not have_gtk4:
+                blabel += " — not installed"
+            self.backend_combo.append(bid, blabel)
+        self.backend_combo.set_active_id(self.config.ui_backend)
+        self.backend_combo.connect(
+            "changed",
+            lambda c: self.config.set("ui_backend", c.get_active_id() or "gtk3"),
+        )
         grid.attach(self.backend_combo, 1, row, 1, 1)
         row += 1
 
         grid.attach(
             Gtk.Label(
-                label="Toolbar/backend changes take effect after restart.",
+                label="Backend changes take effect after restart.",
                 xalign=0.0, wrap=True,
             ),
             1, row, 1, 1,
